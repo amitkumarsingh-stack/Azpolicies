@@ -1,0 +1,81 @@
+{
+  "properties": {
+    "displayName": "Add tag to exclude AKS VMSS from Defender for Cloud",
+    "policyType": "Custom",
+    "mode": "Indexed",
+    "description": "Adds a tag 'DefenderExclusion=true' to AKS VMSS resources to exclude them from Defender for Cloud.",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Security"
+    },
+    "parameters": {
+      "tagName": {
+        "type": "String",
+        "metadata": {
+          "description": "Name of the tag",
+          "displayName": "Tag Name"
+        },
+        "defaultValue": "DefenderExclusion"
+      },
+      "tagValue": {
+        "type": "String",
+        "metadata": {
+          "description": "Value of the tag",
+          "displayName": "Tag Value"
+        },
+        "defaultValue": "true"
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Compute/virtualMachineScaleSets"
+          },
+          {
+            "value": "[not(field('tags[DefenderExclusion]'))]",
+            "equals": true
+          },
+          {
+            "field": "name",
+            "like": "aks*"
+          }
+        ]
+      },
+      "then": {
+        "effect": "deployIfNotExists",
+        "details": {
+          "type": "Microsoft.Compute/virtualMachineScaleSets",
+          "roleDefinitionIds": [
+            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+          ],
+          "deployment": {
+            "properties": {
+              "mode": "incremental",
+              "template": {
+                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "resources": [
+                  {
+                    "type": "Microsoft.Compute/virtualMachineScaleSets",
+                    "apiVersion": "2022-08-01",
+                    "name": "[field('name')]",
+                    "location": "[field('location')]",
+                    "properties": {
+                      "upgradePolicy": {}
+                    },
+                    "tags": {
+                      "[parameters('tagName')]": "[parameters('tagValue')]"
+                    }
+                  }
+                ]
+              },
+              "parameters": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}

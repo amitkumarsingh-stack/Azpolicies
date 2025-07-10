@@ -1,0 +1,66 @@
+## Add tag and remidate
+
+{
+  "properties": {
+    "displayName": "Ensure Defender exclusion tag is set on AKS VMSS nodes",
+    "mode": "Indexed",
+    "description": "Deploys a tag 'DefenderScope=Exclude' to AKS VMSS nodes if missing to avoid Defender charges.",
+    "metadata": {
+      "version": "1.0.0",
+      "category": "Security"
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Compute/virtualMachineScaleSets"
+          },
+          {
+            "field": "name",
+            "like": "aks*"
+          },
+          {
+            "not": {
+              "field": "tags['DefenderScope']",
+              "equals": "Exclude"
+            }
+          }
+        ]
+      },
+      "then": {
+        "effect": "DeployIfNotExists",
+        "details": {
+          "type": "Microsoft.Compute/virtualMachineScaleSets",
+          "name": "[field('name')]",
+          "roleDefinitionIds": [
+            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+          ],
+          "deployment": {
+            "properties": {
+              "mode": "incremental",
+              "template": {
+                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                "contentVersion": "1.0.0.0",
+                "resources": [
+                  {
+                    "type": "Microsoft.Compute/virtualMachineScaleSets",
+                    "apiVersion": "2021-07-01",
+                    "name": "[field('name')]",
+                    "location": "[field('location')]",
+                    "properties": {},
+                    "tags": {
+                      "DefenderScope": "Exclude"
+                    }
+                  }
+                ]
+              },
+              "parameters": {}
+            }
+          }
+        }
+      }
+    },
+    "parameters": {}
+  }
+}

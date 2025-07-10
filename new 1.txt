@@ -1,0 +1,32 @@
+## Audit if not Exists
+----
+{
+  "properties": {
+    "displayName": "Audit AKS VMSS without Defender exclusion tag",
+    "mode": "Indexed",
+    "description": "Audit VMSS (AKS node pools) that do not have the 'DefenderScope=Exclude' tag.",
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Compute/virtualMachineScaleSets"
+          },
+          {
+            "field": "name",
+            "like": "aks*"
+          },
+          {
+            "not": {
+              "field": "tags['DefenderScope']",
+              "equals": "Exclude"
+            }
+          }
+        ]
+      },
+      "then": {
+        "effect": "audit"
+      }
+    }
+  }
+}
