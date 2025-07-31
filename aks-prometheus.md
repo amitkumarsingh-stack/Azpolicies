@@ -22,4 +22,22 @@ Metric retention aligned with Azure Monitor (default is 93 days).
 5. #### 🔐 Security & Compliance
 Metrics are secured within Azure Monitor infrastructure.
 
-Supports Azure RBAC and private link for secure access.
+## Reference Diagram
+![alt text](image.png)
+*Overview about Prometheus scraping in Azure Monitor*
+
+## Enabling Managed Prometheus
+#### Using Bicep
+Below is the sample Bicep code to enable prometheus
+
+<span style="color: green; font-family: monospace;">kubectl get pods</span>
+
+
+```
+kubectl get pods
+```
+
+## Limitations & Known Issues
+
+## References & Links
+
