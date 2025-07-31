@@ -32,10 +32,30 @@ Below is the sample Bicep code to enable prometheus
 
 <span style="color: green; font-family: monospace;">kubectl get pods</span>
 
+#### Using Terraform
+```
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = "aks-managed-prometheus"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  dns_prefix          = "aksmp"
 
-```
-kubectl get pods
-```
+  default_node_pool {
+    name       = "default"
+    node_count = 2
+    vm_size    = "Standard_DS2_v2"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  azure_monitor_metrics {
+    metrics_enabled              = true
+    prometheus_metrics_enabled   = true
+  }
+  ```
+
 
 ## Limitations & Known Issues
 
