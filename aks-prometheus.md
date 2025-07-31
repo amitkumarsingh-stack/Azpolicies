@@ -60,6 +60,13 @@ resource "azurerm_kubernetes_cluster" "aks" {
 Below highlighted code enables Promotheus on AKS
 
 ## Limitations & Known Issues
+🔒 Cannot Enable Managed Prometheus via Azure Portal (Policy Conflict)
+In the current environment, Azure Managed Prometheus cannot be enabled through the Azure Portal UI for AKS.
+This is due to an active Azure Policy that denies the enablement of Prometheus metrics collection via the portal.
+
+✅ Workaround: You can still enable Managed Prometheus using Terraform or Bicep, where the policy doesn't block deployment.
+
+🛠️ Ensure the policy assignment is reviewed if portal-based management is required.
 
 ## References & Links
 
