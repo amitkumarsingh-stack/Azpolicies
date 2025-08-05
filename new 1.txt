@@ -1,29 +1,37 @@
-"Good [morning/afternoon], everyone. Today, I’ll be presenting a quick update about the General Availability (GA) of Azure Monitor Managed Prometheus for Azure Kubernetes Service, also known as AKS.
+Let me walk you through a recent update regarding our Sentinel Policy.
 
-✅ What’s New?
-We’re excited to share that Azure Monitor now provides a fully managed Prometheus experience.
-This means you no longer need to manually deploy, scale, or maintain your own Prometheus infrastructure—it’s all handled by Microsoft, directly integrated with AKS.
+We’ve made an important adjustment to the Azure Policy that controls Diagnostic Settings. This policy is responsible for sending all relevant logs to CISO Detect.
 
-🌟 Key Benefits
-Let’s look at the three main advantages:
+🔧 Why this change?
+This update is driven by the goal of improving cost efficiency. We’re now removing unnecessary logging for components like:
 
-Managed & Scalable:
-The service automatically scales with your workloads. It’s maintained by Microsoft, so you can focus on your applications rather than the monitoring setup.
+kube-audit-admin
 
-Native Integration:
-It integrates directly with Azure Monitor and works seamlessly with Grafana dashboards.
-This simplifies telemetry collection and supports Prometheus metrics scraping out of the box for AKS workloads.
+kube-scheduler
 
-Secure by Default:
-Azure handles security through managed identities and Role-Based Access Control (RBAC), ensuring your metrics are only accessible by authorized users.
+cluster-autoscaler
 
-🚀 How to Get Started
-Right now, Azure Monitor Managed Prometheus can be enabled using Bicep or Terraform.
+These were previously being logged to the sen-p-la Log Analytics Workspace (LAW), which generated unnecessary costs.
 
-(Optional: You can briefly mention if your team uses these tools or plans to implement them.)
+By removing this redundant logging, we can reduce these costs without affecting our essential monitoring and compliance.
 
-⚠️ Important Note
-Please note that enabling via Azure Portal is currently not supported, due to a policy enforcement. So, infrastructure-as-code is the way to go here.
+📅 Timeline:
+This policy will be rolled out to the DTAP environment on 18 August 2025.
 
-📚 Reference Documentation
-If you'd like to explore further, the detailed documentation is available on the wiki page.
+📢 Additional Info:
+There’s an internal announcement made by Mathijs Marks about this change, which you can find in the Container Community on Microsoft Teams. The link is on this slide for reference.
+
+📌 Note to Customers:
+If any teams still require these logs in their local LAW, they will need to enable them manually using their own rules.
+
+✅ Summary Points:
+Policy update to Azure Diagnostic Settings
+
+Unnecessary logs removed for cost savings
+
+Applies to kube-audit-admin, kube-scheduler, cluster-autoscaler
+
+Effective from 18 August 2025
+
+Manual action required for local LAW logging
+
