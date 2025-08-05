@@ -1,32 +1,29 @@
-## Audit if not Exists
-----
-{
-  "properties": {
-    "displayName": "Audit AKS VMSS without Defender exclusion tag",
-    "mode": "Indexed",
-    "description": "Audit VMSS (AKS node pools) that do not have the 'DefenderScope=Exclude' tag.",
-    "policyRule": {
-      "if": {
-        "allOf": [
-          {
-            "field": "type",
-            "equals": "Microsoft.Compute/virtualMachineScaleSets"
-          },
-          {
-            "field": "name",
-            "like": "aks*"
-          },
-          {
-            "not": {
-              "field": "tags['DefenderScope']",
-              "equals": "Exclude"
-            }
-          }
-        ]
-      },
-      "then": {
-        "effect": "audit"
-      }
-    }
-  }
-}
+"Good [morning/afternoon], everyone. Today, I’ll be presenting a quick update about the General Availability (GA) of Azure Monitor Managed Prometheus for Azure Kubernetes Service, also known as AKS.
+
+✅ What’s New?
+We’re excited to share that Azure Monitor now provides a fully managed Prometheus experience.
+This means you no longer need to manually deploy, scale, or maintain your own Prometheus infrastructure—it’s all handled by Microsoft, directly integrated with AKS.
+
+🌟 Key Benefits
+Let’s look at the three main advantages:
+
+Managed & Scalable:
+The service automatically scales with your workloads. It’s maintained by Microsoft, so you can focus on your applications rather than the monitoring setup.
+
+Native Integration:
+It integrates directly with Azure Monitor and works seamlessly with Grafana dashboards.
+This simplifies telemetry collection and supports Prometheus metrics scraping out of the box for AKS workloads.
+
+Secure by Default:
+Azure handles security through managed identities and Role-Based Access Control (RBAC), ensuring your metrics are only accessible by authorized users.
+
+🚀 How to Get Started
+Right now, Azure Monitor Managed Prometheus can be enabled using Bicep or Terraform.
+
+(Optional: You can briefly mention if your team uses these tools or plans to implement them.)
+
+⚠️ Important Note
+Please note that enabling via Azure Portal is currently not supported, due to a policy enforcement. So, infrastructure-as-code is the way to go here.
+
+📚 Reference Documentation
+If you'd like to explore further, the detailed documentation is available on the wiki page.
