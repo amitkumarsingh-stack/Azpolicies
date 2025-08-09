@@ -1,37 +1,43 @@
-Let me walk you through a recent update regarding our Sentinel Policy.
+Upcoming Policy Change: Disable Command Invoke on Azure Kubernetes Service (AKS) Clusters
 
-We’ve made an important adjustment to the Azure Policy that controls Diagnostic Settings. This policy is responsible for sending all relevant logs to CISO Detect.
+Dear Team,
 
-🔧 Why this change?
-This update is driven by the goal of improving cost efficiency. We’re now removing unnecessary logging for components like:
+As part of our ongoing efforts to enhance the security and compliance of our cloud infrastructure, we will be disabling the "Command Invoke" feature on all Azure Kubernetes Service (AKS) clusters.
 
-kube-audit-admin
+🔒 What’s Changing?
+The ability to remotely execute commands using Azure’s kubectl run-command (also known as "Command Invoke") will be disabled across all AKS clusters.
 
-kube-scheduler
+🗓 Effective Date: [Insert Date]
+This change will be rolled out gradually, and we recommend that any workflows depending on this feature be reviewed and updated before the cutoff.
 
-cluster-autoscaler
+💡 Why This Change?
 
-These were previously being logged to the sen-p-la Log Analytics Workspace (LAW), which generated unnecessary costs.
+To reduce potential security exposure by limiting remote command execution.
 
-By removing this redundant logging, we can reduce these costs without affecting our essential monitoring and compliance.
+To align with industry best practices for Kubernetes cluster hardening.
 
-📅 Timeline:
-This policy will be rolled out to the DTAP environment on 18 August 2025.
+To ensure tighter control over cluster access and operations.
 
-📢 Additional Info:
-There’s an internal announcement made by Mathijs Marks about this change, which you can find in the Container Community on Microsoft Teams. The link is on this slide for reference.
+✅ What You Need to Do:
 
-📌 Note to Customers:
-If any teams still require these logs in their local LAW, they will need to enable them manually using their own rules.
+Review your current AKS usage and identify any dependencies on Command Invoke.
 
-✅ Summary Points:
-Policy update to Azure Diagnostic Settings
+Migrate to alternative methods such as using kubectl via bastion hosts or CI/CD pipelines with appropriate RBAC.
 
-Unnecessary logs removed for cost savings
+Reach out to the DevOps team if you need support in updating your processes.
 
-Applies to kube-audit-admin, kube-scheduler, cluster-autoscaler
+📞 Questions or Concerns?
+Please contact [Your Name or Team Name] or drop a message in [relevant Teams channel] for assistance.
 
-Effective from 18 August 2025
+Thank you for your cooperation as we work to maintain a secure and robust infrastructure.
 
-Manual action required for local LAW logging
+Best regards,
+[Your Name]
+[Your Role/Team]
 
+Let me know if you want it to be more casual, shorter, or tailored to a specific audience like developers or stakeholders.
+
+
+
+
+Ask ChatGPT
