@@ -1,66 +1,23 @@
-## Add tag and remidate
+AKS Policy Update: Defender Enabled for D & T, Tagging Restricted to A & P
+AKS Tagging Policy Revised – A & P Only
 
-{
-  "properties": {
-    "displayName": "Ensure Defender exclusion tag is set on AKS VMSS nodes",
-    "mode": "Indexed",
-    "description": "Deploys a tag 'DefenderScope=Exclude' to AKS VMSS nodes if missing to avoid Defender charges.",
-    "metadata": {
-      "version": "1.0.0",
-      "category": "Security"
-    },
-    "policyRule": {
-      "if": {
-        "allOf": [
-          {
-            "field": "type",
-            "equals": "Microsoft.Compute/virtualMachineScaleSets"
-          },
-          {
-            "field": "name",
-            "like": "aks*"
-          },
-          {
-            "not": {
-              "field": "tags['DefenderScope']",
-              "equals": "Exclude"
-            }
-          }
-        ]
-      },
-      "then": {
-        "effect": "DeployIfNotExists",
-        "details": {
-          "type": "Microsoft.Compute/virtualMachineScaleSets",
-          "name": "[field('name')]",
-          "roleDefinitionIds": [
-            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
-          ],
-          "deployment": {
-            "properties": {
-              "mode": "incremental",
-              "template": {
-                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                "contentVersion": "1.0.0.0",
-                "resources": [
-                  {
-                    "type": "Microsoft.Compute/virtualMachineScaleSets",
-                    "apiVersion": "2021-07-01",
-                    "name": "[field('name')]",
-                    "location": "[field('location')]",
-                    "properties": {},
-                    "tags": {
-                      "DefenderScope": "Exclude"
-                    }
-                  }
-                ]
-              },
-              "parameters": {}
-            }
-          }
-        }
-      }
-    },
-    "parameters": {}
-  }
-}
+Following recent discussions with the CISO, it has been decided that Microsoft Defender will be enabled for the D (Development) and T (Test) AKS environments, as these currently lack protection. PCC will continue to be used for the A (Acceptance) and P (Production) environments.
+
+Below are the required actions:
+- Update the existing policy to remove the DisableMDC:yes tag from all environments.
+- Create a new policy that adds the DisableMDC:yes tag only to the AKS environments in A & P, and assign it accordingly.
+- Notify PET that the updated policies have been applied exclusively to A & P environments.
+
+Announcement
+🚨 AKS Policy Update – Defender and Tagging Changes 🚨
+
+As per recent discussions with the CISO, we've made the following changes to our AKS environment policies:
+
+🔹 Microsoft Defender is now enabled for the D (Development) and T (Test) environments to ensure they are protected.
+🔹 PCC will continue to be used for the A (Acceptance) and P (Production) environments.
+🔹 The existing policy has been updated to remove the DisableMDC:yes tag from all environments.
+🔹 A new policy has been created and assigned only to A & P, which applies the DisableMDC:yes tag accordingly.
+
+✅ Policies have now been successfully applied to A & P only.
+
+📣 PET Team – Please note the updated configuration.
