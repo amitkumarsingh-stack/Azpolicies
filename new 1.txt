@@ -1,22 +1,9 @@
-Hi Microsoft Support,
+I hope this message finds you well.
 
-I am currently working on remediating an Azure Policy intended to ensure certain configurations during the deployment of Azure Kubernetes Service (AKS) clusters. The policy I'm trying to apply is intended to ensure the apiServerAccessProfile.disableRunCommand is enabled, and it uses a DeployIfNotExists effect for enforcement (policy definition included below for reference).
+While reviewing the built-in policy "Disable Command Invoke on AKS Cluster," we noticed that it currently references an outdated API version (2023-11-01). This version does not support several important parameters commonly used in modern AKS configurations—such as identity, OMSAgent, and enablePrivateCluster.
 
-However, I am encountering deployment failures due to conflicting policies that are currently assigned:
+Due to this limitation, we were required to clone and modify the policy manually to accommodate these parameters. However, relying on a custom version introduces risk: if Microsoft updates the original policy or alters the behavior of the AKS API, our customized version may become outdated or incompatible.
 
-AAB Azure Kubernetes Service – Container Insights DENY v1
-(Deny when OMS Agent is not set correctly — this issue has been fixed on my end.)
+We kindly request that Microsoft update this built-in policy to use a more recent AKS API version that supports these essential parameters. Doing so would improve policy alignment with current AKS deployment practices and reduce the need for custom policy management.
 
-AAB Azure Kubernetes Service – Private Cluster DENY v1
-(Deny when the private cluster setting or related flags are not configured correctly — this has also been resolved.)
-
-AAB Azure Kubernetes Service – Service Principal DENY v1
-(This denies deployment if the AKS identity type is not set to UserAssigned — this is the one causing issues and I have not been able to work around it.)
-
-The deployment fails due to this last DENY policy, as the remediation logic doesn’t adjust the identity type and thus violates this constraint. I have attempted to adjust the deployment template to satisfy the existence conditions, but the identity.type setting remains a blocker.
-
-Could you please assist in one of the following ways:
-
-Confirm if there is a way to bypass or override the DENY policy in the remediation for service principal.
-
-Provide guidance on how to update the remediation logic to comply with the UserAssigned
+Thank you for your attention and continued support.
