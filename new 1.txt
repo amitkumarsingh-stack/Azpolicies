@@ -1,9 +1,3 @@
-I hope this message finds you well.
-
-While reviewing the built-in policy "Disable Command Invoke on AKS Cluster," we noticed that it currently references an outdated API version (2023-11-01). This version does not support several important parameters commonly used in modern AKS configurations—such as identity, OMSAgent, and enablePrivateCluster.
-
-Due to this limitation, we were required to clone and modify the policy manually to accommodate these parameters. However, relying on a custom version introduces risk: if Microsoft updates the original policy or alters the behavior of the AKS API, our customized version may become outdated or incompatible.
-
-We kindly request that Microsoft update this built-in policy to use a more recent AKS API version that supports these essential parameters. Doing so would improve policy alignment with current AKS deployment practices and reduce the need for custom policy management.
-
-Thank you for your attention and continued support.
+What specific threats does Azure Linux Guard defend against?
+What is the difference between Azure Linux Guard and traditional EDR solutions like Defender for Endpoint on Linux?
+Does it integrate with Microsoft Defender for Cloud or Sentinel for SIEM/SOAR workflows?
