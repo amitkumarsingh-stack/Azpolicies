@@ -1,3 +1,9 @@
-What specific threats does Azure Linux Guard defend against?
-What is the difference between Azure Linux Guard and traditional EDR solutions like Defender for Endpoint on Linux?
-Does it integrate with Microsoft Defender for Cloud or Sentinel for SIEM/SOAR workflows?
+Initially, we intended to use the Azure built-in policy with a Deny effect. However, because it relied on an outdated API, it didn’t support all the required parameters. As a result, we had to implement a custom policy instead.
+
+We now use two policies: Audit and Deny.
+
+The Deny policy prevents the creation of any new clusters unless the Invoke command is enabled. It also blocks updates to existing clusters unless this command is active. This ensures that all newly created resources remain compliant with our standards.
+
+The Audit policy targets existing clusters. If the Invoke command is not enabled, the policy flags them for review. These cases are then addressed by the respective teams through IPT.
+
+Hope that clears things up!
