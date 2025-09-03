@@ -1,19 +1,9 @@
-Summary: Why We Block AKS Invoke Command
+We are temporarily removing the deny policy for the AKS Invoke command due to an issue we are currently facing with the azurerm provider during AKS resource updates.
 
-The az aks command invoke feature is blocked to protect our AKS clusters from potential security, compliance, and operational risks.
+The issue arises when Terraform attempts to update an existing AKS resource. During the plan phase, it identifies parameters that require updating. However, during the actual update operation, it does not send all the required parameters, causing the operation to fail.
 
-🚫 Key Reasons:
+🔧 To mitigate this, we are switching the policy effect from Deny to Audit mode for now. This will allow necessary operations to proceed while we work on resolving the underlying issue.
 
-Bypasses Kubernetes RBAC – Users can run commands without in-cluster permissions.
+Once the issue is fixed, we will revert the policy effect back to Deny to maintain compliance.
 
-Enables Remote Code Execution – Equivalent to shell access on cluster nodes or pods.
-
-Hard to Audit – Actions may not appear in Kubernetes audit logs.
-
-Violates Least Privilege – Gives more access than intended to Azure users.
-
-Non-Compliant – Conflicts with security standards in regulated environments.
-
-✅ We enforce this by:
-
-Applying an Azure Policy that denies the runCommand action:
+Please reach out if you have any questions or concerns.
