@@ -1,9 +1,19 @@
-Initially, we intended to use the Azure built-in policy with a Deny effect. However, because it relied on an outdated API, it didn’t support all the required parameters. As a result, we had to implement a custom policy instead.
+Summary: Why We Block AKS Invoke Command
 
-We now use two policies: Audit and Deny.
+The az aks command invoke feature is blocked to protect our AKS clusters from potential security, compliance, and operational risks.
 
-The Deny policy prevents the creation of any new clusters unless the Invoke command is enabled. It also blocks updates to existing clusters unless this command is active. This ensures that all newly created resources remain compliant with our standards.
+🚫 Key Reasons:
 
-The Audit policy targets existing clusters. If the Invoke command is not enabled, the policy flags them for review. These cases are then addressed by the respective teams through IPT.
+Bypasses Kubernetes RBAC – Users can run commands without in-cluster permissions.
 
-Hope that clears things up!
+Enables Remote Code Execution – Equivalent to shell access on cluster nodes or pods.
+
+Hard to Audit – Actions may not appear in Kubernetes audit logs.
+
+Violates Least Privilege – Gives more access than intended to Azure users.
+
+Non-Compliant – Conflicts with security standards in regulated environments.
+
+✅ We enforce this by:
+
+Applying an Azure Policy that denies the runCommand action:
