@@ -1,4 +1,4 @@
-For below policy should I go for "Audit" or "AuditIfNotExists"
+
 {
   "mode": "Indexed",
   "policyRule": {
