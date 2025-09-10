@@ -1,9 +1,15 @@
-We are temporarily removing the deny policy for the AKS Invoke command due to an issue we are currently facing with the azurerm provider during AKS resource updates.
+Thank you for the call.
 
-The issue arises when Terraform attempts to update an existing AKS resource. During the plan phase, it identifies parameters that require updating. However, during the actual update operation, it does not send all the required parameters, causing the operation to fail.
+We’re looking to leverage the built-in policy "Disable Command Invoke on Azure Kubernetes Service Cluster", but we've encountered some challenges with its implementation. Since this is a DeployIfNotExists (DINE) policy, it attempts to deploy the required configuration if it’s not already present. However, this behavior conflicts with other existing policies we have in place.
 
-🔧 To mitigate this, we are switching the policy effect from Deny to Audit mode for now. This will allow necessary operations to proceed while we work on resolving the underlying issue.
+Specifically, we have several CIS benchmark-aligned policies that deny cluster creation or updates if certain configurations are missing—such as:
 
-Once the issue is fixed, we will revert the policy effect back to Deny to maintain compliance.
+Ensuring the AKS cluster is private
 
-Please reach out if you have any questions or concerns.
+Requiring a user-assigned managed identity
+
+Verifying that the OMS agent (Azure Monitor) is enabled
+
+When the built-in policy performs an incremental update, it omits some of these required parameters, which causes the update to be blocked by our existing policies. As a result, the built-in policy fails to apply as intended.
+
+Due to this limitation, we've had to clone and modify the built-in policy to include the necessary parameters, ensuring compatibility with our compliance requirements.
