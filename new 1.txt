@@ -1,15 +1,15 @@
-Thank you for the call.
+This policy was triggered because your Azure Monitor Workspace does not have a Private Endpoint connection, or the connection is not in an Approved state.
 
-We’re looking to leverage the built-in policy "Disable Command Invoke on Azure Kubernetes Service Cluster", but we've encountered some challenges with its implementation. Since this is a DeployIfNotExists (DINE) policy, it attempts to deploy the required configuration if it’s not already present. However, this behavior conflicts with other existing policies we have in place.
+To remediate this policy violation, please follow these steps:
 
-Specifically, we have several CIS benchmark-aligned policies that deny cluster creation or updates if certain configurations are missing—such as:
+Navigate to your Azure Monitor Workspace in the Azure portal.
 
-Ensuring the AKS cluster is private
+Go to the Networking section, then click on Private Access.
 
-Requiring a user-assigned managed identity
+Check for an existing Private Endpoint and review its Connection State.
 
-Verifying that the OMS agent (Azure Monitor) is enabled
+If no Private Endpoint exists, please create one.
 
-When the built-in policy performs an incremental update, it omits some of these required parameters, which causes the update to be blocked by our existing policies. As a result, the built-in policy fails to apply as intended.
+Ensure that the connection status shows as “Approved”.
 
-Due to this limitation, we've had to clone and modify the built-in policy to include the necessary parameters, ensuring compatibility with our compliance requirements.
+Once the Private Endpoint is in place and approved, the policy should no longer flag the resource.
