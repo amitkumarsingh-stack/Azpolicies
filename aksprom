@@ -1,0 +1,158 @@
+@description('Name of resource group')
+param rgName string = resourceGroup().name
+
+@description('Location')
+param location string = resourceGroup().location
+
+@description('AKS cluster name')
+param aksName string = 'myAksCluster'
+
+@description('Node pool VM size')
+param agentVMSize string = 'Standard_DS2_v2'
+
+@description('Node count')
+param agentCount int = 3
+
+@description('Name of existing VNet for AKS')
+param vnetName string
+
+@description('Subnet for AKS') 
+param subnetName string
+
+@description('Name of Azure Monitor Workspace for Prometheus')
+param prometheusWorkspaceName string = 'promWs'
+
+@description('Name for the Private Link Scope for Azure Monitor Workspace')
+param privateLinkScopeName string = 'amlPrivateLinkScope'
+
+@description('Name for the private endpoint in the VNet')
+param peName string = 'pePrometheusMetrics'
+
+resource vnet 'Microsoft.Network/virtualNetworks@2022-05-01' existing = {
+  name: vnetName
+}
+
+resource subnetAKS 'Microsoft.Network/virtualNetworks/subnets@2022-05-01' existing = {
+  parent: vnet
+  name: subnetName
+}
+
+resource workspace 'Microsoft.OperationalInsights/workspaces@2021-06-01' = {
+  name: prometheusWorkspaceName
+  location: location
+  sku: {
+    name: 'PerGB2018'
+  }
+  retentionInDays: 30
+}
+
+resource managedPrometheus 'Microsoft.Prometheus/managedServiceForPrometheus@2024-01-01' = {
+  name: '${aksName}-prom'
+  location: location
+  properties: {
+    workspaceResourceId: workspace.id
+    publicNetworkAccess: 'Disabled'  // ensure only private
+  }
+}
+
+resource privateLinkScope 'Microsoft.Promonitor/privateLinkScopes@2024-01-01' = {
+  name: privateLinkScopeName
+  location: location
+  properties: {
+    ingestionAccessMode: 'PrivateOnly'
+  }
+}
+
+resource privateEndpointPromMetrics 'Microsoft.Network/privateEndpoints@2022-05-01' = {
+  name: peName
+  location: location
+  properties: {
+    subnet: {
+      id: subnetAKS.id
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'plsPrometheusMetricsConn'
+        properties: {
+          privateLinkServiceId: workspace.id
+          groupIds: [
+            'prometheusMetrics'
+          ]
+          // Optional: request message or auto-approval
+        }
+      }
+    ]
+  }
+}
+
+// Optionally, Private DNS zone for the workspace private endpoint
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.monitor.azure.com'
+  location: 'global'
+}
+
+resource vnetLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  name: '${privateDnsZone.name}-link-${vnet.name}'
+  location: 'global'
+  dependsOn: [
+    privateEndpointPromMetrics
+  ]
+  properties: {
+    virtualNetwork: {
+      id: vnet.id
+    }
+    registrationEnabled: false
+  }
+}
+
+// AKS cluster with Managed Prometheus enabled via addon
+resource aksCluster 'Microsoft.ContainerService/managedClusters@2023-10-01' = {
+  name: aksName
+  location: location
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    dnsPrefix: aksName
+    agentPoolProfiles: [
+      {
+        name: 'agentpool'
+        count: agentCount
+        vmSize: agentVMSize
+        mode: 'System'
+        osType: 'Linux'
+        vnetSubnetID: subnetAKS.id
+      }
+    ]
+    networkProfile: {
+      networkPlugin: 'azure'
+      # If you want AKS to be private cluster:
+      apiServerAccessProfile: {
+        enablePrivateCluster: true
+      }
+    }
+    addonProfiles: {
+      azureMonitor: {
+        enabled: true
+        config: {
+          workspaceResourceId: workspace.id
+        }
+      }
+    }
+  }
+  dependsOn: [
+    workspace
+  ]
+}
+
+// Ensure that the private link scope is linked to the workspace’s Data Collection Endpoint
+// Note: this may need a resource that represents the DCE; AKS / Managed Prometheus usually creates a DCR + DCE.
+
+resource workspacePrivateLinkScopeAssoc 'Microsoft.Promonitor/privateLinkScopes/azureMonitorResources@2024-01-01' = {
+  name: '${privateLinkScopeName}/${workspace.name}'
+  parent: privateLinkScope
+  properties: {
+    azureMonitorResourceId: workspace.id
+  }
+}
+
