@@ -1,0 +1,99 @@
+🔧 1. Infrastructure & Deployment Validation
+
+ Verify AKS cluster creation completed successfully in each region
+
+ Ensure node pools are properly configured (VM size, scaling policies)
+
+ Confirm VNet and subnet configurations align with your network design
+
+ Validate regional resource quotas and limits
+
+ Check if regional Azure policies are applied (RBAC, tagging, etc.)
+
+🌐 2. Networking & Connectivity
+
+ Test internal and external DNS resolution
+
+ Verify pod-to-pod, pod-to-service, and service-to-service communication
+
+ Validate ingress controller and load balancer setup (e.g., Azure Application Gateway, NGINX)
+
+ Test cross-region network latency (if applicable)
+
+ Check connectivity to:
+
+Azure resources (e.g., Key Vault, Storage, SQL, etc.)
+
+On-prem (if hybrid)
+
+Internet egress
+
+🔐 3. Security & Policy Compliance
+
+ Test Azure Policy enforcement in the new regions (e.g., allowed locations, image restrictions)
+
+ Validate network policies (e.g., NSGs, Kubernetes network policies)
+
+ Ensure secrets management is functioning (Key Vault integration, CSI drivers)
+
+ Check identity and access management:
+
+Azure AD integration
+
+Role-based access control (RBAC)
+
+Service accounts
+
+📦 4. Workload Deployment & CI/CD
+
+ Test workload deployments using your CI/CD pipeline (Dev, QA, Prod stages)
+
+ Validate that container images pull correctly (from ACR or other registries)
+
+ Ensure Helm charts or Kubernetes manifests work without region-specific assumptions
+
+ Test environment variables, config maps, and secrets per region
+
+📈 5. Monitoring, Logging & Alerts
+
+ Confirm integration with Azure Monitor / Log Analytics
+
+ Validate that logs from new regional clusters are visible in your central dashboard
+
+ Test alerts for node failure, pod restarts, high memory/CPU
+
+ Validate that Prometheus/Grafana (if used) captures metrics from the new clusters
+
+📉 6. Failover & Resilience Testing (Optional / Advanced)
+
+ Test if services can be re-routed or failover to another region
+
+ Validate multi-region DNS (e.g., Traffic Manager, Front Door)
+
+ Simulate node failure and test recovery
+
+🔁 7. Data & Storage Validation
+
+ Test persistent volume claims (PVC) provisioning
+
+ Ensure compatibility with regional storage classes
+
+ Test backup/restore strategies (if using Velero or similar)
+
+ Validate latency or throughput of storage in the new region
+
+📜 8. Compliance / Governance (Org-specific)
+
+ Ensure logging meets audit requirements for the region
+
+ Validate encryption at rest and in transit
+
+ Confirm region-specific compliance mandates (e.g., GDPR in EU regions)
+
+🧪 Optional: Performance Benchmarks
+
+ Run load tests to compare performance between regions
+
+ Test autoscaling under stress (HPA / VPA)
+
+ Compare latency to key services (e.g., databases, APIs)
