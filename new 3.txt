@@ -1,81 +1,36 @@
-{
-  "properties": {
-    "displayName": "Add tag to exclude AKS VMSS from Defender for Cloud",
-    "policyType": "Custom",
-    "mode": "Indexed",
-    "description": "Adds a tag 'DefenderExclusion=true' to AKS VMSS resources to exclude them from Defender for Cloud.",
-    "metadata": {
-      "version": "1.0.0",
-      "category": "Security"
-    },
-    "parameters": {
-      "tagName": {
-        "type": "String",
-        "metadata": {
-          "description": "Name of the tag",
-          "displayName": "Tag Name"
-        },
-        "defaultValue": "DefenderExclusion"
-      },
-      "tagValue": {
-        "type": "String",
-        "metadata": {
-          "description": "Value of the tag",
-          "displayName": "Tag Value"
-        },
-        "defaultValue": "true"
-      }
-    },
-    "policyRule": {
-      "if": {
-        "allOf": [
-          {
-            "field": "type",
-            "equals": "Microsoft.Compute/virtualMachineScaleSets"
-          },
-          {
-            "value": "[not(field('tags[DefenderExclusion]'))]",
-            "equals": true
-          },
-          {
-            "field": "name",
-            "like": "aks*"
-          }
-        ]
-      },
-      "then": {
-        "effect": "deployIfNotExists",
-        "details": {
-          "type": "Microsoft.Compute/virtualMachineScaleSets",
-          "roleDefinitionIds": [
-            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
-          ],
-          "deployment": {
-            "properties": {
-              "mode": "incremental",
-              "template": {
-                "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-                "contentVersion": "1.0.0.0",
-                "resources": [
-                  {
-                    "type": "Microsoft.Compute/virtualMachineScaleSets",
-                    "apiVersion": "2022-08-01",
-                    "name": "[field('name')]",
-                    "location": "[field('location')]",
-                    "properties": {
-                      "upgradePolicy": {}
-                    },
-                    "tags": {
-                      "[parameters('tagName')]": "[parameters('tagValue')]"
-                    }
-                  }
-                ]
-              },
-              "parameters": {}
-            }
-          }
-        }
-      }
-    }
-  }
-}
+We’re pleased to announce that the Azure Policy responsible for enforcing GitOps principles with Flux v2 across our AKS clusters has been fully restored.
+
+As a reminder, this policy automates the deployment and lifecycle management of the Flux v2 extension—including Git repository connections, Helm chart configurations, and other Flux resources—based on our central source of truth stored in the designated Azure Storage Account. This ensures that all AKS clusters remain consistent, compliant, and continuously aligned with our approved configurations without manual intervention.
+
+A few days ago, this enforcement flow experienced an interruption, which temporarily prevented Flux extension deployment and configuration updates from being applied automatically. The issue has now been fully resolved.
+
+🔍 Verification Required
+
+To ensure everything is functioning correctly on your clusters, please run the following command:
+
+kubectl get bucket -A
+
+
+What to look for:
+
+If the command returns the list of Flux buckets, everything is working as expected.
+
+If you see the following error:
+
+“This request is not authorized to perform this operation using this permission”
+
+please report it back to the platform team immediately.
+
+✅ What this means going forward
+
+GitOps enforcement via Azure Policy is active and functioning as intended
+
+Flux v2 extensions and configurations will continue to auto-deploy and reconcile across all AKS clusters
+
+No manual intervention is required from application or platform teams
+
+Compliance, security, and drift protection controls are fully reinstated
+
+If you have any questions or observe unexpected behavior, please reach out.
+
+Thank you for your support and collaboration.
