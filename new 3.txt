@@ -1,15 +1,9 @@
-Azure Policy: Block Pod Deployments in the default Namespace for AKS
+Pod Creation is Blocked in default Namespace
 
-To strengthen workload isolation and enforce best practices in our AKS clusters, we are implementing an Azure Policy that blocks the creation of Pods specifically within the default namespace.
+Attempting to deploy a Pod directly into the default namespace results in a policy denial.
 
-The default namespace is intended only for system or administrative components when no namespace is explicitly specified. Allowing application workloads to run here can lead to operational risks, reduced visibility, and policy-bypass scenarios.
+Deployment, Job, DaemonSet, StatefulSet, or ReplicaSet that would create Pods in the default namespace must also be denied.
 
-We are only blocking Pod deployments in the default namespace because Kubernetes automatically creates and manages several essential resources there—such as ServiceAccount, ConfigMap, and certain system Services—that must remain unaffected for cluster functionality and stability. Restricting only Pod creation ensures that:
+System Resources Are Not Impacted
 
-Application workloads cannot be deployed to the default namespace.
-
-Existing system resources created by Kubernetes continue to function normally.
-
-Teams are encouraged to deploy workloads into properly defined, isolated namespaces.
-
-This policy enforces namespace hygiene while avoiding disruption of required Kubernetes system objects.
+Kubernetes-managed resources created in the default namespace (e.g., ServiceAccount, ConfigMap, system Services) must not be denied or blocked by the policy.
