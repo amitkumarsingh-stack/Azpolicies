@@ -1,1 +1,119 @@
-There was a CoreDNS issue in AKS 1.32 where version 1.12.0 introduced a breaking change — it stopped creating some internal DNS records, which caused lookup failures for certain pods and services. Microsoft rolled that version back and the problem was fixed upstream in CoreDNS 1.12.1. AKS 1.33 now uses the fixed version, so the issue is resolved. We just need to verify DNS resolution after upgrades, especially for clusters that might have briefly run 1.12.0
+1. AKS Cluster
+
+Resource: Microsoft.ContainerService/managedClusters
+
+The Azure Kubernetes Service (AKS) cluster hosts your workloads and exposes Prometheus metrics via exporters (for example: kube-state-metrics, node-exporter, application metrics).
+
+Responsibility:
+
+Generates operational and application metrics.
+
+Runs the Azure Monitor Agent / Prometheus forwarder to send metrics.
+
+2. Data Collection Rule (DCR)
+
+Resource: Microsoft.Insights/dataCollectionRules
+
+Defines what data to collect and where to send it.
+
+Responsibility:
+
+Specifies Prometheus metrics as a data source.
+
+Routes those metrics to the Azure Monitor Workspace.
+
+Acts as the policy layer for telemetry collection.
+
+3. Data Collection Endpoint (DCE)
+
+Resource: Microsoft.Insights/dataCollectionEndpoints
+
+Acts as the ingestion endpoint used by the agent running in AKS.
+
+Responsibility:
+
+Provides a stable endpoint for metric ingestion.
+
+Enables network control over ingestion traffic.
+
+Integrates with AMPLS to enforce private ingestion.
+
+4. Azure Monitor Private Link Scope (AMPLS)
+
+Resource: Microsoft.Insights/privateLinkScopes
+
+Central control point that enforces private access to Azure Monitor.
+
+Responsibility:
+
+Enforces private-only ingestion and query access.
+
+Acts as a security boundary between your VNet and Azure Monitor services.
+
+Links monitored resources (like DCE and AMW) into a private scope.
+
+5. Private Endpoint (to Azure Monitor / AMPLS / AMW)
+
+Resource: Microsoft.Network/privateEndpoints
+
+Provides private network connectivity from your VNet to Azure Monitor services.
+
+Responsibility:
+
+Assigns a private IP address in your VNet to Azure Monitor services.
+
+Ensures traffic never traverses the public internet.
+
+Enforces network isolation.
+
+6. Private DNS Zone
+
+Example: privatelink.westeurope.prometheus.monitor.azure.com
+
+Provides name resolution for Private Endpoints.
+
+Responsibility:
+
+Resolves Azure Monitor FQDNs to private IPs.
+
+Ensures AKS and users reach Azure Monitor over private paths.
+
+7. Azure Monitor Workspace (AMW)
+
+Resource: Microsoft.Monitor/accounts
+
+Stores Prometheus metrics and supports querying.
+
+Responsibility:
+
+Acts as the time-series database for Prometheus metrics.
+
+Provides query interface for KQL, Grafana, and Azure Portal.
+
+Has public access disabled for security.
+
+8. User / Operations (Grafana / Azure Portal / KQL Clients)
+
+Represents platform engineers, SREs, or monitoring tools querying metrics.
+
+Responsibility:
+
+Runs queries to visualize or analyze metrics.
+
+Connects through Private Endpoint and AMPLS.
+
+Cannot access metrics over public internet.
+
+9. Virtual Network & Subnet
+
+Resources: Microsoft.Network/virtualNetworks, subnets
+
+Provides network isolation and routing.
+
+Responsibility:
+
+Hosts the Private Endpoints.
+
+Isolates monitoring traffic inside the Azure network.
+
+Acts as the security boundary.
