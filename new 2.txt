@@ -1,13 +1,8 @@
-Create Private Endpoint to AMW
-
-Create Azure Monitor Private Link Scope (AMPLS) (private only ingestion + query)
-
-Create Private Endpoint to AMPLS
-
-Create Data Collection Endpoint (DCE)
-
-Link DCE to AMPLS
-
-Create Data Collection Rule (DCR) to forward Prometheus metrics
-
-Associate DCR with AKS
+| Item                               | Check                                                 |
+| ---------------------------------- | ----------------------------------------------------- |
+| AKS exists                         | `mcpk-dev-amit-04` in RG `mcpk-d-rg`                  |
+| Subnet exists                      | `aks05-subnet` in VNet `mcpk1-d-vnet`                 |
+| Subnet delegation                  | Must allow private endpoints                          |
+| DNS Zone exists                    | `privatelink.westeurope.prometheus.monitor.azure.com` |
+| Permissions                        | Owner or Contributor on target RG + Network RG        |
+| AKS has Managed Prometheus enabled | (or you plan to enable it)                            |
