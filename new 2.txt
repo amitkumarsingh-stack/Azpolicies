@@ -1,3 +1,17 @@
-sum by (namespace, pod) (
-  container_memory_working_set_bytes{container!="",image!=""}
-)
+We need to evaluate and document how Microsoft Entra Privileged Identity Management (PIM) can be used to control just-in-time (JIT) access to Azure Kubernetes Service (AKS) for both:
+
+AKS control plane (cluster admin / RBAC access)
+
+Optional SSH access to AKS nodes
+
+This spike will focus on understanding prerequisites, required configurations, limitations, and readiness for enabling PIM on existing AKS clusters.
+
+Business Justification
+
+Reduce standing privileged access to AKS
+
+Improve security posture using least privilege and JIT access
+
+Meet audit and compliance requirements
+
+Standardize privileged access across Azure resources
