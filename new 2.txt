@@ -1,17 +1,9 @@
-We need to evaluate and document how Microsoft Entra Privileged Identity Management (PIM) can be used to control just-in-time (JIT) access to Azure Kubernetes Service (AKS) for both:
+AKS auto-update can introduce unplanned changes to Kubernetes versions, node images, or components, which may lead to:
 
-AKS control plane (cluster admin / RBAC access)
+Unexpected downtime or service disruption
 
-Optional SSH access to AKS nodes
+Compatibility issues with workloads, add-ons, or custom configurations
 
-This spike will focus on understanding prerequisites, required configurations, limitations, and readiness for enabling PIM on existing AKS clusters.
+Reduced ability to test and validate changes before deployment
 
-Business Justification
-
-Reduce standing privileged access to AKS
-
-Improve security posture using least privilege and JIT access
-
-Meet audit and compliance requirements
-
-Standardize privileged access across Azure resources
+To ensure stability, reliability, and proper change management, all AKS upgrades must be performed manually and follow our standard upgrade and validation process.
