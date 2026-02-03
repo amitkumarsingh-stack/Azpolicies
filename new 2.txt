@@ -1,9 +1,801 @@
-AKS auto-update can introduce unplanned changes to Kubernetes versions, node images, or components, which may lead to:
+What should users be allowed to deploy?
+🔒 Principle
 
-Unexpected downtime or service disruption
+Namespace isolation + RBAC + policy enforcement
+Users should deploy application-level resources, not cluster-level or infrastructure resources.
 
-Compatibility issues with workloads, add-ons, or custom configurations
+✅ Allowed for users (namespace-scoped)
 
-Reduced ability to test and validate changes before deployment
+These are generally safe and expected:
 
-To ensure stability, reliability, and proper change management, all AKS upgrades must be performed manually and follow our standard upgrade and validation process.
+Core workload
+
+Deployment
+
+StatefulSet (if needed)
+
+Job, CronJob
+
+Pod (optional – often blocked in prod to force Deployments)
+
+ReplicaSet (indirectly via Deployment)
+
+Networking
+
+Service
+
+Ingress (prefer via approved IngressClass)
+
+Config & identity
+
+ConfigMap
+
+Secret (prefer external secret stores if possible)
+
+ServiceAccount
+
+Role, RoleBinding (namespace only)
+
+Scaling & reliability
+
+HorizontalPodAutoscaler
+
+PodDisruptionBudget
+
+❌ Should NOT be allowed to users
+
+These should be platform/team-owned only:
+
+ClusterRole, ClusterRoleBinding
+
+CustomResourceDefinition (CRD)
+
+Namespace
+
+Node, NodePool
+
+StorageClass
+
+IngressClass
+
+MutatingWebhookConfiguration
+
+ValidatingWebhookConfiguration
+
+NetworkPolicy (optional – depends on model)
+
+👉 Enforce this with:
+
+Azure RBAC for AKS
+
+Kubernetes RBAC
+
+OPA Gatekeeper / Kyverno policies
+
+2️⃣ What quotas should be set on a namespace?
+🎯 Goal
+
+Prevent:
+
+Noisy neighbor issues
+
+Accidental cluster exhaustion
+
+One team eating all IPs / CPU / memory
+
+You typically want 3 layers:
+
+ResourceQuota
+
+LimitRange
+
+Optional object count limits
+
+📦 ResourceQuota (baseline example)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-quota
+  namespace: team-a
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    pods: "50"
+    services: "20"
+    persistentvolumeclaims: "10"
+
+
+📌 Tune per environment:
+
+Dev: smaller quotas
+
+Prod: higher but controlled
+
+Shared tools: separate namespace
+
+📏 LimitRange (MANDATORY)
+
+This stops users from creating pods with no limits.
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: team-a
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+    type: Container
+
+🔢 Object quotas (optional but useful)
+count/deployments.apps: "10"
+count/ingresses.networking.k8s.io: "5"
+
+
+Great for preventing “oops I deployed 200 things”.
+
+3️⃣ Standard templates – what must users fill in?
+🎯 Principle
+
+Users should provide intent, not plumbing
+
+Your templates should:
+
+Hide complexity
+
+Force best practices
+
+Be policy-compliant by default
+
+📄 Deployment template – REQUIRED user inputs
+
+These are the fields users must fill (everything else should be defaulted):
+
+🔹 Mandatory fields
+
+app.name
+
+image.repository
+
+image.tag
+
+containerPort
+
+replicas (or autoscaling config)
+
+resources.requests.cpu
+
+resources.requests.memory
+
+resources.limits.cpu
+
+resources.limits.memory
+
+livenessProbe
+
+readinessProbe
+
+🔹 Strongly recommended
+
+env (non-secret)
+
+secretRefs
+
+serviceAccountName
+
+nodeSelector / tolerations (if needed)
+
+topologySpreadConstraints
+
+podDisruptionBudget
+
+🔹 Example opinionated Deployment skeleton
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ app.name }}
+  labels:
+    app: {{ app.name }}
+spec:
+  replicas: {{ replicas }}
+  selector:
+    matchLabels:
+      app: {{ app.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ app.name }}
+    spec:
+      serviceAccountName: {{ serviceAccount }}
+      containers:
+      - name: {{ app.name }}
+        image: {{ image.repository }}:{{ image.tag }}
+        ports:
+        - containerPort: {{ containerPort }}
+        resources:
+          requests:
+            cpu: {{ cpuRequest }}
+            memory: {{ memoryRequest }}
+          limits:
+            cpu: {{ cpuLimit }}
+            memory: {{ memoryLimit }}
+        readinessProbe: {{ readinessProbe }}
+        livenessProbe: {{ livenessProbe }}
+
+🧱 Service template – REQUIRED
+
+Users must provide:
+
+service.type (ClusterIP default)
+
+ports
+
+targetPort
+
+Avoid LoadBalancer unless platform-approved.
+
+🧠 Strongly recommended platform controls (don’t skip)
+✅ Enforce via policy (OPA / Kyverno)
+
+Pods must have:
+
+resource requests & limits
+
+non-root user
+
+readOnlyRootFilesystem
+
+No latest image tags
+
+Approved registries only
+
+No privileged containers
+
+Ingress only via approved class
+
+🏷️ Mandatory labels (enforceable)
+
+Require these on every object:
+
+app.kubernetes.io/name
+app.kubernetes.io/team
+app.kubernetes.io/environment
+cost-center
+owner
+
+
+This pays off BIG TIME for:
+
+Cost allocation
+
+Incident response
+
+Cleanup
+
+🧭 Recommended ownership model
+Area	Owner
+AKS cluster	Platform team
+Node pools	Platform
+Ingress controller	Platform
+Network policies	Platform
+Namespace	Platform
+Workloads	App teams
+🚀 If you want, next steps I can help with
+
+A full namespace bootstrap template
+
+A reference RBAC model per team
+
+Kyverno / Gatekeeper policy examples
+
+A Golden Path repo structure
+
+Mapping this to Azure RBAC + Entra ID groups
+
+Just tell me how deep you want to go 🙂
+
+A full namespace bootstrap template
+
+Perfect — here’s a production-grade “namespace bootstrap” template that platform teams commonly use for a central AKS cluster.
+This is what you apply once per team/environment to make the namespace ready before any app teams deploy workloads.
+
+I’ll give you:
+
+What this bootstrap includes
+
+A complete YAML bundle
+
+Notes on what to customize vs lock down
+
+1️⃣ What a namespace bootstrap should include
+
+At minimum, a “ready” namespace should have:
+
+✅ Namespace + standard labels
+✅ ResourceQuota
+✅ LimitRange
+✅ Default ServiceAccount (locked down)
+✅ RBAC for app teams (namespace-scoped)
+✅ NetworkPolicy (baseline deny / allow)
+✅ Pod Security enforcement
+✅ Optional: image pull secret, PDB defaults
+
+2️⃣ Full Namespace Bootstrap Template (YAML)
+
+You can keep this as a single file or split it into kustomize/helm.
+
+🟦 Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: team-a-dev
+  labels:
+    name: team-a-dev
+    environment: dev
+    team: team-a
+    app.kubernetes.io/managed-by: platform
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+
+📦 ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: team-a-quota
+  namespace: team-a-dev
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    pods: "50"
+    services: "20"
+    persistentvolumeclaims: "10"
+
+📏 LimitRange (MANDATORY)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: team-a-dev
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+    max:
+      cpu: "2"
+      memory: "2Gi"
+
+🔐 Default ServiceAccount (locked down)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default
+  namespace: team-a-dev
+automountServiceAccountToken: false
+
+
+App teams should create their own ServiceAccounts when needed.
+
+👤 Application ServiceAccount (example)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-sa
+  namespace: team-a-dev
+
+🔑 RBAC – Namespace Admin (Team Leads)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: namespace-admin
+  namespace: team-a-dev
+rules:
+- apiGroups: ["", "apps", "batch", "autoscaling", "networking.k8s.io"]
+  resources: ["*"]
+  verbs: ["*"]
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: namespace-admin-binding
+  namespace: team-a-dev
+subjects:
+- kind: Group
+  name: aks-team-a-admins   # Entra ID group
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: namespace-admin
+  apiGroup: rbac.authorization.k8s.io
+
+🔐 RBAC – Application Developers (Restricted)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-developer
+  namespace: team-a-dev
+rules:
+- apiGroups: ["", "apps", "batch", "autoscaling"]
+  resources:
+    - deployments
+    - statefulsets
+    - daemonsets
+    - jobs
+    - cronjobs
+    - services
+    - configmaps
+    - secrets
+    - pods
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-developer-binding
+  namespace: team-a-dev
+subjects:
+- kind: Group
+  name: aks-team-a-devs   # Entra ID group
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: app-developer
+  apiGroup: rbac.authorization.k8s.io
+
+🌐 NetworkPolicy – Default Deny (baseline)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: team-a-dev
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+
+🌐 NetworkPolicy – Allow same-namespace traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-namespace-internal
+  namespace: team-a-dev
+spec:
+  podSelector: {}
+  ingress:
+  - from:
+    - podSelector: {}
+
+🌐 NetworkPolicy – Allow DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: team-a-dev
+spec:
+  podSelector: {}
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+
+🏷️ (Optional) Enforced Labels via Policy (example intent)
+
+Implement with Kyverno or Gatekeeper, not raw YAML
+
+Required labels:
+
+app.kubernetes.io/name
+
+app.kubernetes.io/team
+
+app.kubernetes.io/environment
+
+owner
+
+cost-center
+
+3️⃣ What app teams should NEVER touch
+
+🚫 Namespace
+🚫 ResourceQuota / LimitRange
+🚫 RBAC
+🚫 NetworkPolicy (unless delegated)
+🚫 Pod Security settings
+
+These stay platform-owned.
+
+4️⃣ How this fits into a Golden Path
+
+Typical flow:
+
+Platform runs namespace bootstrap
+
+App team gets access via Entra ID group
+
+App team deploys using approved Helm/Kustomize templates
+
+Policies enforce guardrails automatically
+
+Want next?
+
+I can:
+
+Convert this into Helm or Kustomize
+
+Add Kyverno policies that enforce your standards
+
+Create a per-environment version (dev/test/prod)
+
+Map this fully to Azure RBAC for AKS
+
+Just tell me 👍
+
+A Golden Path repo structure
+
+Nice, you’re clearly building this the right way 👍
+A Golden Path repo should make the right thing the easy thing for app teams, while keeping platform concerns cleanly separated.
+
+Below is a proven repo structure that works very well for central AKS + multiple teams, followed by how each folder is used and how teams actually consume it.
+
+🏗️ Golden Path Repository Structure
+aks-golden-path/
+├── README.md
+├── docs/
+│   ├── onboarding.md
+│   ├── standards.md
+│   ├── security.md
+│   ├── networking.md
+│   └── troubleshooting.md
+│
+├── platform/
+│   ├── namespaces/
+│   │   ├── team-a/
+│   │   │   ├── dev/
+│   │   │   │   ├── namespace.yaml
+│   │   │   │   ├── resourcequota.yaml
+│   │   │   │   ├── limitrange.yaml
+│   │   │   │   ├── rbac.yaml
+│   │   │   │   ├── networkpolicy.yaml
+│   │   │   │   └── kustomization.yaml
+│   │   │   └── prod/
+│   │   └── team-b/
+│   │
+│   ├── cluster/
+│   │   ├── ingress/
+│   │   │   ├── nginx/
+│   │   │   └── appgw/
+│   │   ├── policies/
+│   │   │   ├── kyverno/
+│   │   │   └── gatekeeper/
+│   │   ├── monitoring/
+│   │   ├── logging/
+│   │   └── autoscaling/
+│   │
+│   └── tooling/
+│       ├── cert-manager/
+│       ├── external-dns/
+│       ├── external-secrets/
+│       └── metrics-server/
+│
+├── templates/
+│   ├── helm/
+│   │   ├── app-base/
+│   │   │   ├── Chart.yaml
+│   │   │   ├── values.yaml
+│   │   │   └── templates/
+│   │   │       ├── deployment.yaml
+│   │   │       ├── service.yaml
+│   │   │       ├── ingress.yaml
+│   │   │       ├── hpa.yaml
+│   │   │       └── pdb.yaml
+│   │   └── job/
+│   │
+│   └── kustomize/
+│       ├── base/
+│       │   ├── deployment.yaml
+│       │   ├── service.yaml
+│       │   └── kustomization.yaml
+│       └── overlays/
+│           ├── dev/
+│           ├── test/
+│           └── prod/
+│
+├── examples/
+│   ├── simple-api/
+│   ├── worker/
+│   └── cronjob/
+│
+├── ci/
+│   ├── github-actions/
+│   │   ├── validate.yaml
+│   │   └── deploy.yaml
+│   └── azure-devops/
+│
+└── scripts/
+    ├── bootstrap-namespace.sh
+    ├── validate-manifests.sh
+    └── render-helm.sh
+
+🔑 How each part is used
+📁 platform/ (Platform-owned ONLY)
+
+Not writable by app teams
+
+platform/namespaces/
+
+One folder per team per environment
+
+Contains your namespace bootstrap
+
+Applied by platform CI/CD
+
+👉 This is where your previous namespace template lives.
+
+platform/cluster/
+
+Cluster-wide components:
+
+Ingress controllers
+
+Kyverno / Gatekeeper policies
+
+Monitoring & logging
+
+Autoscalers
+
+🚫 App teams never touch this.
+
+platform/tooling/
+
+Shared add-ons:
+
+cert-manager
+
+external-secrets
+
+external-dns
+
+metrics-server
+
+📁 templates/ (The Golden Path ❤️)
+
+This is what app teams actually use.
+
+templates/helm/app-base/
+
+Your opinionated application chart:
+
+Security defaults baked in
+
+Resource limits required
+
+Probes mandatory
+
+Labels enforced
+
+Ingress standardized
+
+Users only edit values.yaml.
+
+Typical required fields:
+
+app:
+  name:
+  team:
+  environment:
+
+image:
+  repository:
+  tag:
+
+resources:
+  requests:
+  limits:
+
+templates/kustomize/
+
+For teams that don’t want Helm:
+
+base/ → locked down
+
+overlays/ → env-specific tweaks
+
+📁 examples/
+
+Copy-paste ready references:
+
+Simple REST API
+
+Background worker
+
+CronJob
+
+💡 These dramatically reduce onboarding friction.
+
+📁 docs/
+
+Short, opinionated docs:
+
+“How to deploy your first app in 10 minutes”
+
+“What you’re allowed to do”
+
+“Common mistakes”
+
+Keep docs short and prescriptive.
+
+📁 ci/
+
+Shared pipelines:
+
+Manifest validation (OPA/Kyverno, kubeconform)
+
+Helm linting
+
+Security scanning
+
+App teams can reuse these verbatim.
+
+📁 scripts/
+
+Small helpers:
+
+Namespace bootstrap
+
+Local validation
+
+Rendering manifests
+
+🔄 How app teams actually consume this
+Option A – Reference as a dependency
+
+App repo:
+
+dependencies:
+- name: app-base
+  version: 1.2.0
+  repository: https://internal-repo/charts
+
+Option B – Template generator
+./scripts/create-app.sh my-service
+
+Option C – Fork (least preferred)
+
+Allowed, but loses central upgrades.
+
+🧠 Governance model (important)
+Item	Control
+Namespace	Platform
+Quotas	Platform
+Policies	Platform
+Templates	Platform
+values.yaml	App teams
+CI pipelines	Shared
+🚀 What makes this a real Golden Path
+
+✔ “Hello World” deployable in <10 min
+✔ Impossible to deploy insecure workloads
+✔ No YAML copy-paste from old clusters
+✔ Upgrades centrally managed
+✔ Clear ownership boundaries
