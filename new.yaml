@@ -1,17 +1,152 @@
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
+apiVersion: v1
+kind: ConfigMap
 metadata:
-  name: allow-nginx-ingress
-  namespace: default
-spec:
-  podSelector:
-    matchLabels:
-      app: nginx
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - {}  # allow from any pod/namespace
-    ports:
-    - protocol: TCP
-      port: 80
+  name: ama-metrics-settings-configmap
+  namespace: kube-system
+
+data:
+  schema-version: v1
+  config-version: ver2
+
+  # Default collectors enabled
+  default-scrape-settings-enabled: |-
+    kubelet = true
+    coredns = true
+    cadvisor = true
+    kubeproxy = false
+    apiserver = false
+    kubestate = true
+    nodeexporter = true
+    windowsexporter = false
+    prometheusCollectorHealth = true
+
+  # Scrape intervals
+  default-targets-scrape-interval-settings: |-
+    kubelet = "30s"
+    coredns = "30s"
+    cadvisor = "30s"
+    kubestate = "30s"
+    nodeexporter = "30s"
+    prometheusCollectorHealth = "60s"
+
+  # Allow annotation-based scraping for team namespaces
+  pod-annotation-based-scraping: |-
+    podannotationnamespaceregex = "team-alpha|team-beta|team-gamma"
+
+  service-annotation-based-scraping: |-
+    serviceannotationnamespaceregex = "team-alpha|team-beta|team-gamma"
+
+  prometheus-collector-settings: |-
+    cluster_alias = "aks-multi-team-cluster"
+
+  custom-scrape-settings: |-
+    scrape_configs:
+
+      # ----------------------------------------------------------
+      # Scrape annotated pods across team namespaces
+      # ----------------------------------------------------------
+      - job_name: team-pods
+        scrape_interval: 30s
+
+        kubernetes_sd_configs:
+        - role: pod
+          namespaces:
+            names:
+            - team-alpha
+            - team-beta
+            - team-gamma
+
+        relabel_configs:
+
+        # Only scrape pods with annotation
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+          action: keep
+          regex: "true"
+
+        # Build podIP:port target
+        - source_labels: [__meta_kubernetes_pod_ip,__meta_kubernetes_pod_annotation_prometheus_io_port]
+          action: replace
+          regex: (.+);(.+)
+          replacement: $1:$2
+          target_label: __address__
+
+        # Set metrics path
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+          regex: (.+)
+
+        # Add namespace label
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: namespace
+
+        # Add pod label
+        - source_labels: [__meta_kubernetes_pod_name]
+          target_label: pod
+
+        # Required label for Azure Monitor ingestion
+        - source_labels: [__meta_kubernetes_namespace]
+          target_label: microsoft_metrics_include_label
+
+
+      # ----------------------------------------------------------
+      # cAdvisor container resource metrics
+      # CPU / Memory / Network per namespace
+      # ----------------------------------------------------------
+      - job_name: cadvisor-teams
+        scrape_interval: 30s
+        scheme: https
+
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+          insecure_skip_verify: true
+
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+
+        kubernetes_sd_configs:
+        - role: node
+
+        relabel_configs:
+
+        - action: labelmap
+          regex: __meta_kubernetes_node_label_(.+)
+
+        - target_label: __address__
+          replacement: kubernetes.default.svc:443
+
+        - source_labels: [__meta_kubernetes_node_name]
+          target_label: __metrics_path__
+          replacement: /api/v1/nodes/$1/proxy/metrics/cadvisor
+
+        metric_relabel_configs:
+
+        # Keep only metrics from team namespaces
+        - source_labels: [namespace]
+          action: keep
+          regex: team-alpha|team-beta|team-gamma
+
+        # Required Azure label
+        - source_labels: [namespace]
+          target_label: microsoft_metrics_include_label
+
+
+      # ----------------------------------------------------------
+      # kube-state-metrics (deployment / pod / PVC / HPA etc)
+      # ----------------------------------------------------------
+      - job_name: kube-state-teams
+        scrape_interval: 30s
+
+        static_configs:
+        - targets:
+          - kube-state-metrics.kube-system.svc.cluster.local:8080
+
+        metric_relabel_configs:
+
+        # Keep only team namespaces
+        - source_labels: [namespace]
+          action: keep
+          regex: team-alpha|team-beta|team-gamma
+
+        # Required label for Azure ingestion
+        - source_labels: [namespace]
+          target_label: microsoft_metrics_include_label
