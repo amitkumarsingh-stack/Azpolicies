@@ -1,0 +1,41 @@
+{
+  "location": "${LOCATION}",
+  "tags": { "environment": "poc", "team": "${NAME}" },
+  "kind": "Linux",
+  "properties": {
+    "description": "Container Insights DCR for team",
+    "dataSources": {
+      "extensions": [
+        {
+          "name": "ContainerInsightsExtension-team-1",
+          "streams": [
+            "Microsoft-ContainerInsights-Group-Default"
+          ],
+          "extensionName": "ContainerInsights",
+          "extensionSettings": {
+            "dataCollectionSettings": {
+              "interval": "1m",
+              "namespaceFilteringMode": "Include",
+              "namespaces": ["team-1"],
+              "enableContainerLogV2": true
+            }
+          }
+        }
+      ]
+    },
+    "destinations": {
+      "logAnalytics": [
+        {
+          "workspaceResourceId": "${LAW_ID}",
+          "name": "LogAnalytics-${NAME}"
+        }
+      ]
+    },
+    "dataFlows": [
+      {
+        "streams": ["Microsoft-ContainerInsights-Group-Default"],
+        "destinations": ["LogAnalytics-${NAME}"]
+      }
+    ]
+  }
+}
