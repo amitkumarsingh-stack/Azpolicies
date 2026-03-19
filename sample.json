@@ -848,21 +848,21 @@ dashboardProviders:
       editable: true
       options:
         path: /var/lib/grafana/dashboards/cilium
-    - name: 'k8s'
+    - name: 'cluster'
       orgId: 1
-      folder: 'cluster-health'       
+      folder: 'cluster'       
       type: file
       disableDeletion: false
       editable: true
       options:
-        path: /var/lib/grafana/dashboards/k8s
+        path: /var/lib/grafana/dashboards/cluster
 
 dashboards: {}
 
 dashboardsConfigMaps:
   default: default-dashboards
   cilium: cilium-dashboards
-  k8s: cluster-health
+  cluster: cluster-dashboards
 
 # extraObjects: []
 
