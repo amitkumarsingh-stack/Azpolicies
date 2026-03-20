@@ -1,9 +1,26 @@
-Pod Creation is Blocked in default Namespace
+Step 1: Create Managed Identity & Role Based access on Azure Managed Prometheus
+Repo: akscp-infra-pipeline
+Pipeline: akscp-aks-build
+Stage: deploy_umi_grafana (Creates Managed Identity)
+Stage: deploy_rbac (To provide Role based access on Prometheus)
 
-Attempting to deploy a Pod directly into the default namespace results in a policy denial.
+Step 2: Create SSL certs for Grafana
+Repo: akscp-infra-foundation-templates
+Pipeline: infra-g3-certificate-pipeline
 
-Deployment, Job, DaemonSet, StatefulSet, or ReplicaSet that would create Pods in the default namespace must also be denied.
+Step 3: Register DNS
+ServiceNow Portal
 
-System Resources Are Not Impacted
+Step 4: Grafana App Registration
+Repo: akcp-infra-pipeline
+Pipeline: Grafana-app-registration
 
-Kubernetes-managed resources created in the default namespace (e.g., ServiceAccount, ConfigMap, system Services) must not be denied or blocked by the policy.
+Step 5: Deploy Grafana on Central Cluster
+Repo: akscp-monitoring-setup
+Pipeline: akscp-aks-build
+
+Step 6: Network policies
+Repo: akscp-network-setup
+Pipeline: ?
+
+
