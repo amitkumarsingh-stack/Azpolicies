@@ -1,14 +1,1046 @@
-# nginx-service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-service
-spec:
-  selector:
-    app: nginx
-  type: LoadBalancer
-  ports:
-  - name: https
-    port: 443
-    targetPort: 443
-    protocol: TCP
+trigger:
+- none
+
+# Parameters: This will help to pass the values to your pipeline templates during run time or by default. This will help you running a pipeline with certain values by changing it as required.
+parameters:
+  - name: applicationIdToQuery # The Azure Devops Environment (Optional)
+    type: string
+    displayName: 'Provide the applicationId of your app once its created in case of conflicting display names'
+    default: 'useDisplayName'
+  - name: pEnv
+    displayName: Target Environment
+    type: string
+    default: dev
+    values:
+    - dev
+    - tst
+    - acc
+    - prd
+resources:
+  repositories:
+    - repository: pita-pipeline-templates
+      type: git
+      name: GRD0001045/pita-pipeline-templates
+      ref: "refs/heads/master"
+
+
+variables:
+  - name: aab_pipeline_type
+    value: infra
+  - name: region
+    value: we 
+  - group: Abnamro.Coesd.VariableGroup.GlobalVars
+  - template: /variables/${{ parameters.pEnv }}/${{ variables.region }}-${{ parameters.pEnv }}.yaml
+
+pool: Private Pool Deployment Docker
+
+stages:
+
+- stage: Service_Principal
+  jobs:
+  - job: Service_Principal
+    pool: Private Pool Deployment Docker
+    displayName: Service Principal
+    variables:
+      - template: /variables/${{ parameters.pEnv }}/${{ variables.region }}-${{ parameters.pEnv }}.yaml
+
+    steps:
+    - checkout: self
+      path: ./s # The folder this repo is checked out to.
+
+    # New Service Principal: https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=new-serviceprincipal
+    # An existing SPN will not be modified.
+    - task: AzurePowerShell@5
+      displayName: New ServicePrincipal
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://managedsp-sp.abnamro.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          $uri = "https://it4it.abnamro.com/tierafunctions/managedsp/New-ServicePrincipal"
+
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+
+          $body = @{
+              "DisplayName" = "${{ variables.GrafanaServicePrincipalName }}"
+          } | ConvertTo-Json -Compress
+
+          Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Post" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+          }
+          Catch {
+            Write-Error "Exception encountered while setting Single Sign-on mode to SAML on Application '$ApplicationDisplayName'. Error: $($_.Exception.Message)"
+          }
+          
+    # Retrieve the details from SPN creation task to variables to be shared for subsequent tasks
+    - task: AzurePowerShell@5
+      displayName: Retrieve AAD Application
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        Inline: |
+          # Check if the applicationIdToQuery has a value otherwise we query based on provided displayName.
+          if ("${{parameters.applicationIdToQuery}}" -ne 'useDisplayName'){
+            $appOutput = Get-AzADApplication -ApplicationId "${{parameters.applicationIdToQuery}}"
+            $spnOutput = Get-AzADServicePrincipal -ApplicationId "${{parameters.applicationIdToQuery}}"
+          }
+          else {
+            $appOutput = Get-AzADApplication -displayname "${{ variables.GrafanaServicePrincipalName }}"
+            $spnOutput = Get-AzADServicePrincipal -displayname "${{ variables.GrafanaServicePrincipalName }}"
+          }
+
+          $appId=$appOutput.AppId
+          $appObjectId=$appOutput.id
+          $spnObjectId=$spnOutput.id
+          echo "##vso[task.setvariable variable=appId;]$appId"
+          echo "##vso[task.setvariable variable=appObjectId;]$appObjectId"
+          echo "##vso[task.setvariable variable=spnObjectId;]$spnObjectId"
+
+    # Output the above variables
+    - task: AzurePowerShell@5
+      displayName: Output AAD Application variables
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        Inline: |
+          echo "Application ID: $(appId)"
+          echo "Application Object ID: $(appObjectId)"
+          echo "ServicePrincipal Object ID: $(spnObjectId)"
+
+
+    # Add client secret to SPN: https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=serviceprincipal-secrets-/-key-rotation
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Add client secret
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          $endDateTime = (Get-Date).AddDays(180).ToUniversalTime().ToString("s")
+          $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)/addPassword"
+          write-host $uri
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+
+          $body = @{
+              "passwordCredential" = @{
+                  "displayName"   = "${{ variables.GrafanaServicePrincipalSecretName }}"
+                  "startDateTime" = (Get-Date).ToUniversalTime().ToString("o")
+                  "endDateTime"   = $endDateTime
+              }
+          } | ConvertTo-Json -Compress
+
+          $result = (Invoke-WebRequest -Uri $uri -Method 'Post' -Headers $headers -Body $body -UseBasicParsing)| ConvertFrom-Json -AsHashtable
+          $secretText = $($result).secretText
+          Write-Host "##vso[task.setvariable variable=secretText;isSecret=true;]$secretText"
+          Write-Host "##vso[task.setvariable variable=endDateTime;]$endDateTime"
+    
+    # Add secret to Key VAult: https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=serviceprincipal-secrets-/-key-rotation
+    - task: AzureCLI@2
+      displayName: Add secret to Key Vault
+      enabled: true
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az keyvault secret set \
+            --name ${{ variables.GrafanaServicePrincipalSecretName }} \
+            --vault-name ${{ variables.keyVaultName }} \
+            --value "$(secretText)" \
+            --expires "$(endDateTime)Z"
+
+    # Remove expired client secrets to remain compliant to the virtual policy; https://confluence.int.abnamro.com/display/GRIDAD/AAB+Service+Principal+credentials+are+valid
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Remove expired client secrets
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+          
+          [datetime]$now = (Get-Date).ToUniversalTime()
+          Write-Host "Secrets expiring earlier than '$now' will be deleted"
+          
+          Try {
+              # Fetch existing passwords
+              $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)"
+              $existingPasswords = $(Invoke-WebRequest -Uri $uri -Method "Get" -Headers $headers).passwordCredentials
+          
+              # Delete old passwords
+              Foreach ($password in $existingPasswords) {
+                  [datetime]$passwordExpiryDate = $password.endDateTime
+                  If ($passwordExpiryDate -lt $now) {
+                      Write-Host "Removing secret with id '$password.keyId' from app registration"
+                      $body = @{ keyId = $password.keyId} | ConvertTo-Json -Depth 99 -Compress
+                      $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)/removePassword"
+                      $result = Invoke-WebRequest -Uri $uri -Method "Post" -Headers $headers -Body $body
+                  }
+              }
+          }
+          Catch {
+              echo $_
+              Write-Error "Error while removing client secret:`n $_"
+          }
+
+
+    # Request App Permissions: https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=request-apppermissions
+    # Do NOT request AD Graph Permissions, these are deprecated.
+    # More information on non MS Graph Permissions: https://confluence.int.abnamro.com/pages/viewpage.action?spaceKey=GRIDAD&title=FAQ+and+Troubleshooting+on+generic+topics#FAQandTroubleshootingongenerictopics-DeployusingFunctionApp
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Request AppPermissions
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://managedsp-sp.abnamro.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          $uri = "https://it4it.abnamro.com/tierafunctions/managedsp/Request-AppPermissions"
+
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+
+          $body = @{
+              "ApplicationObjectId"    = "$(appObjectId)"
+              "EmailAddress"           = "${{ variables.emailAddress }}"
+              "ApplicationPermissions" = @{
+                  "Microsoft Graph" = @(
+                      "Directory.Read.All"
+                  )
+              }
+              "DelegatedPermissions" = @{
+                  "Microsoft Graph" = @(
+                      "Directory.Read.All"
+                      "User.Read"
+                      "openid"
+                      "profile"
+                      "email"
+                  )
+              }
+          } | ConvertTo-Json -Compress
+
+          Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Post" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+          }
+          Catch {
+              $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+              $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+              $streamReader.Close()
+          }
+
+          If ($errResp) {
+              Write-Error "There was an issue requesting permissions for the Service Principal. Error: $($errResp | Format-List | Out-String)"
+          }
+          Else {
+              $getReleaseId = $result.Where({ $_."Severity" -eq "RESULT" })
+              If ($getReleaseId) {
+                  $releaseId = (($getReleaseId.Message -split ": ")[-1]).Trim().trimEnd('.')
+                  echo "ReleaseId: $releaseId"
+                  # With this line a pipeline release variable (called: OutReleaseUri) is created, which can be used in following stages.
+                  Write-Host "##vso[task.setvariable variable=OutReleaseUri;]$releaseId"
+              }
+              else {
+                  Write-Host "##vso[task.setvariable variable=OutReleaseUri;]empty"
+              }
+
+            Write-Host "FunctionApp finished successfully. Output: $($result | Format-List | Out-String)"
+          }
+
+
+
+    # Get admin consent: https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=get-adminconsentstatus
+    # There's a one minute delay to make sure the admin consent can be retrieved.
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Get AdminConsentStatus
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://managedsp-sp.abnamro.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          $uri = "https://it4it.abnamro.com/tierafunctions/managedsp/Get-AdminConsentStatus"
+
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+              "Accept"        = "application/json"
+          }
+
+          $body = @{
+              "ApplicationObjectId" = "$(appObjectId)"
+              "ReleaseUri"          = "$(OutReleaseUri)"
+          } | ConvertTo-Json -Compress
+
+          # Output release variable
+          echo "Release variable: $(OutReleaseUri)"
+
+          If ("$(OutReleaseUri)" -ne "empty") {
+
+              echo "Wait 1 Minute before retrieving AdminConsentStatus"
+              Start-Sleep -Seconds 60
+
+              Try {
+                  echo "Retrieving AdminConsentStatus, this might take a couple minutes..."
+                  $result = Invoke-WebRequest -Uri $uri -Method "Post" -Headers $headers -Body $body -UseBasicParsing -TimeoutSec 300 -SkipHttpErrorCheck
+              }
+              Catch {
+                  $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                  $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+                  $streamReader.Close()
+              }
+
+              If ($errResp) {
+                  Write-Error "There was an issue retrieving the admin consent status. Error: $($errResp | Format-List | Out-String)"
+              }
+              Else {
+                  Write-Host "FunctionApp finished successfully. Output: $($result | Format-List | Out-String)"
+              }
+
+              $getWorkItem = $result.Where({ $_."Severity" -eq "RESULT" })
+              If ($getWorkItem) {
+                  $workItem = ($getWorkItem.Message -split ": ")[-1]
+                  Write-Host "Contact FSCP with Work Item: '$workItem'"
+              }
+          }
+          Elseif ("$(OutReleaseUri)" -eq "empty") {
+
+              Write-Host "Release Id is empty, no admin consent request release was created, no need to retrieve the status"
+          }
+
+
+    # Create single AAD App Role which can be used to assign to a group in the subsequent task.
+    # https://dev.azure.com/cbsp-abnamro/Azure/_wiki/wikis/Azure.wiki/73442/Service-Principal-Deploy-using-Function-App?anchor=require-user-assignment-and-assign-the-default-role-to-a-group
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Create App Role
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type" = "application/json"
+          }
+
+          Write-Host "=========================================="
+          Write-Host "Managing App Roles for '${{ variables.GrafanaServicePrincipalName }}'"
+          Write-Host "=========================================="
+
+          # Step 1: Get existing app roles from the application
+          $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)"
+          $app = Invoke-RestMethod -Uri $uri -Method "Get" -Headers $headers
+          $existingRoles = $app.appRoles
+
+          Write-Host "`n[Step 1] Current App Roles:"
+          if ($existingRoles -and $existingRoles.Count -gt 0) {
+            $existingRoles | ForEach-Object {
+              Write-Host "  - $($_.displayName) | value: $($_.value) | id: $($_.id) | enabled: $($_.isEnabled)"
+            }
+          } else {
+            Write-Host "  (None)"
+          }
+
+          # Step 2: Define desired app roles
+          # ============================================================
+          # ONLY ROLES DEFINED HERE WILL EXIST IN APP REGISTRATION
+          # Roles removed from this list will be DELETED
+          # ============================================================
+          $desiredRoles = @(
+            @{
+              "allowedMemberTypes" = @("User")
+              "description" = "Grafana Administrator - Full access to Grafana"
+              "displayName" = "Grafana Admin"
+              "isEnabled" = $true
+              "value" = "Admins"
+            },
+            @{
+              "allowedMemberTypes" = @("User")
+              "description" = "Grafana ReadOnly - Viewer Access for Grafana UI"
+              "displayName" = "Grafana ReadOnly"
+              "isEnabled" = $true
+              "value" = "ReadOnly"
+            }
+          )
+
+          Write-Host "`n[Step 2] Desired App Roles:"
+          $desiredRoles | ForEach-Object {
+            Write-Host "  - $($_.displayName) | value: $($_.value)"
+          }
+
+          # Step 3: Identify roles to add, keep, and remove
+          $finalRoles = @()
+          $rolesToAdd = @()
+          $rolesToKeep = @()
+          $rolesToRemove = @()
+
+          # Find roles to keep or add
+          foreach ($desired in $desiredRoles) {
+            $existing = $existingRoles | Where-Object { 
+              $_.value -eq $desired.value -or $_.displayName -eq $desired.displayName 
+            } | Select-Object -First 1
+
+            if ($existing) {
+              # Role exists - preserve its ID
+              $finalRoles += @{
+                "allowedMemberTypes" = $desired.allowedMemberTypes
+                "description" = $desired.description
+                "displayName" = $desired.displayName
+                "id" = $existing.id
+                "isEnabled" = $true
+                "value" = $desired.value
+              }
+              $rolesToKeep += $desired.displayName
+            } else {
+              # New role - generate new ID
+              $newId = (New-Guid).Guid
+              $finalRoles += @{
+                "allowedMemberTypes" = $desired.allowedMemberTypes
+                "description" = $desired.description
+                "displayName" = $desired.displayName
+                "id" = $newId
+                "isEnabled" = $true
+                "value" = $desired.value
+              }
+              $rolesToAdd += $desired.displayName
+            }
+          }
+
+          # Find roles to remove (exist but not in desired list)
+          foreach ($existing in $existingRoles) {
+            $isDesired = $desiredRoles | Where-Object { 
+              $_.value -eq $existing.value -or $_.displayName -eq $existing.displayName 
+            }
+            
+            if (-not $isDesired) {
+              $rolesToRemove += $existing.displayName
+              Write-Host "  ⚠ Role '$($existing.displayName)' will be REMOVED" -ForegroundColor Red
+            }
+          }
+
+          # Step 4: Summary of changes
+          Write-Host "`n[Step 3] Planned Changes:"
+          Write-Host "  Roles to keep: $($rolesToKeep.Count)" -ForegroundColor Green
+          if ($rolesToKeep) { $rolesToKeep | ForEach-Object { Write-Host "    - $_" } }
+          
+          Write-Host "  Roles to add: $($rolesToAdd.Count)" -ForegroundColor Cyan
+          if ($rolesToAdd) { $rolesToAdd | ForEach-Object { Write-Host "    - $_" } }
+          
+          Write-Host "  Roles to remove: $($rolesToRemove.Count)" -ForegroundColor Red
+          if ($rolesToRemove) { $rolesToRemove | ForEach-Object { Write-Host "    - $_" } }
+
+          # Step 5: Check if any changes needed
+          $needsUpdate = ($rolesToAdd.Count -gt 0) -or ($rolesToRemove.Count -gt 0)
+          
+          # Also check if any existing role properties need updating
+          foreach ($desired in $desiredRoles) {
+            $existing = $existingRoles | Where-Object { $_.value -eq $desired.value }
+            if ($existing) {
+              if ($existing.description -ne $desired.description -or 
+                  $existing.displayName -ne $desired.displayName -or
+                  $existing.isEnabled -ne $true) {
+                $needsUpdate = $true
+                Write-Host "  → Role '$($desired.displayName)' properties need update"
+              }
+            }
+          }
+
+          if (-not $needsUpdate) {
+            Write-Host "`n=========================================="
+            Write-Host "✓ All app roles are already up to date" -ForegroundColor Green
+            Write-Host "=========================================="
+            
+            $appRoleIds = ($existingRoles | ForEach-Object { $_.id }) -join ' '
+            Write-Host "##vso[task.setvariable variable=appRoleIds;]$appRoleIds"
+            Write-Host "`nApp Role IDs: $appRoleIds"
+            exit 0
+          }
+
+          Write-Host "`n[Step 4] Applying changes..."
+
+          # Step 6: If there are existing ENABLED roles, we must disable them first
+          $hasEnabledRoles = $existingRoles | Where-Object { $_.isEnabled -eq $true }
+          
+          if ($hasEnabledRoles) {
+            Write-Host "`n  [Step 4a] Disabling existing enabled roles first..."
+            
+            $disabledRoles = @()
+            foreach ($role in $existingRoles) {
+              $disabledRoles += @{
+                "allowedMemberTypes" = $role.allowedMemberTypes
+                "description" = $role.description
+                "displayName" = $role.displayName
+                "id" = $role.id
+                "isEnabled" = $false
+                "value" = $role.value
+              }
+            }
+
+            $disableBody = @{
+              "appRoles" = $disabledRoles
+            } | ConvertTo-Json -Depth 99 -Compress
+
+            Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $disableBody -UseBasicParsing -SkipHttpErrorCheck
+              
+              if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+                Write-Host "  ✓ Disabled existing roles successfully" -ForegroundColor Green
+                Start-Sleep -Seconds 3
+              } else {
+                Write-Warning "  Failed to disable roles. Status: $($result.StatusCode)"
+                Write-Host $result.Content
+                exit 1
+              }
+            }
+            Catch {
+              $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+              $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+              $streamReader.Close()
+              Write-Error "Disabling app roles failed: $($errResp.error.message)"
+              exit 1
+            }
+          }
+
+          # Step 7: Apply final roles (only desired roles, removes others)
+          Write-Host "`n  [Step 4b] Applying final app roles configuration..."
+          Write-Host "  (Roles not in desired list will be removed)"
+          
+          $updateBody = @{
+            "appRoles" = $finalRoles
+          } | ConvertTo-Json -Depth 99 -Compress
+
+          Try {
+            $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $updateBody -UseBasicParsing -SkipHttpErrorCheck
+            
+            if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+              Write-Host ""
+              Write-Host "=========================================="
+              Write-Host "✓ App Roles updated successfully!" -ForegroundColor Green
+              Write-Host "=========================================="
+              
+              if ($rolesToAdd.Count -gt 0) {
+                Write-Host "  Added: $($rolesToAdd -join ', ')" -ForegroundColor Cyan
+              }
+              if ($rolesToRemove.Count -gt 0) {
+                Write-Host "  Removed: $($rolesToRemove -join ', ')" -ForegroundColor Red
+              }
+              
+              $appRoleIds = ($finalRoles | ForEach-Object { $_.id }) -join ' '
+              Write-Host "##vso[task.setvariable variable=appRoleIds;]$appRoleIds"
+              
+              Write-Host ""
+              Write-Host "Final App Roles:"
+              $finalRoles | ForEach-Object {
+                Write-Host "  - $($_.displayName)" -ForegroundColor Cyan
+                Write-Host "    Value: $($_.value)" -ForegroundColor Yellow
+                Write-Host "    ID: $($_.id)"
+                Write-Host ""
+              }
+              Write-Host "=========================================="
+            } else {
+              Write-Warning "Unexpected status code: $($result.StatusCode)"
+              $content = $result.Content | ConvertFrom-Json
+              Write-Host "Error: $($content.error.message)"
+              exit 1
+            }
+          }
+          Catch {
+            $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+            $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+            $streamReader.Close()
+            Write-Error "Updating app roles failed: $($errResp.error.message)"
+            exit 1
+          }
+
+    # Require user assignment and assign app roles to groups
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Set User Assignment
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
+
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+
+          $headers = @{
+            "Authorization" = "Bearer $token"
+            "Content-Type"  = "application/json"
+          }
+
+          $spnObjectId = "$(spnObjectId)"
+          $appObjectId = "$(appObjectId)"
+
+          Write-Host "=========================================="
+          Write-Host "Setting User Assignment for '${{ variables.GrafanaServicePrincipalName }}'"
+          Write-Host "=========================================="
+
+          # Step 1: Enable User Assignment Required
+          Write-Host "`n[Step 1] Enabling 'User Assignment Required'..."
+          $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$spnObjectId"
+          
+          $body = @{
+            "appRoleAssignmentRequired" = $true
+          } | ConvertTo-Json -Depth 99 -Compress
+
+          Try {
+            $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+            
+            if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+              Write-Host "  ✓ User Assignment Required is ENABLED" -ForegroundColor Green
+            } else {
+              Write-Warning "  Unexpected status code: $($result.StatusCode)"
+            }
+          }
+          Catch {
+            Write-Error "Failed to enable User Assignment Required: $($_.Exception.Message)"
+            exit 1
+          }
+
+          # Step 2: Get existing app roles from the application
+          Write-Host "`n[Step 2] Retrieving App Roles..."
+          $uri = "https://graph.microsoft.com/v1.0/applications/$appObjectId"
+          $app = Invoke-RestMethod -Uri $uri -Method "Get" -Headers $headers
+          $appRoles = $app.appRoles | Where-Object { $_.isEnabled -eq $true }
+
+          Write-Host "  Found App Roles:"
+          $appRoles | ForEach-Object {
+            Write-Host "    - $($_.displayName) (value: $($_.value), id: $($_.id))"
+          }
+
+          # Step 3: Define role-to-group mappings
+          # ============================================================
+          # UPDATE THIS SECTION TO ADD/MODIFY GROUP ASSIGNMENTS
+          # Format: @{ "appRoleValue" = "groupObjectId" }
+          # Assignments removed from this list will be DELETED
+          # ============================================================
+          $roleGroupMappings = @{
+            "admin"    = "${{ variables.GrafanaadminGroupObjectId }}"      # Group for Grafana Admins
+            "ReadOnly" = "${{ variables.GrafanaReaderGroupObjectId }}"    # Group for Grafana ReadOnly
+            # Add more mappings as needed:
+            # "viewer"   = "${{ variables.viewerGroupObjectId }}"
+          }
+
+          Write-Host "`n[Step 3] Desired Role-to-Group Mappings:"
+          foreach ($mapping in $roleGroupMappings.GetEnumerator()) {
+            Write-Host "    - Role '$($mapping.Key)' → Group '$($mapping.Value)'"
+          }
+
+          # Step 4: Get existing assignments
+          Write-Host "`n[Step 4] Checking existing assignments..."
+          $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$spnObjectId/appRoleAssignedTo"
+          $existingAssignments = (Invoke-RestMethod -Uri $uri -Method "Get" -Headers $headers).value
+
+          if ($existingAssignments -and $existingAssignments.Count -gt 0) {
+            Write-Host "  Existing assignments:"
+            foreach ($assignment in $existingAssignments) {
+              # Fixed: Store assignment.appRoleId in variable first
+              $assignmentRoleId = $assignment.appRoleId
+              $role = $appRoles | Where-Object { $_.id -eq $assignmentRoleId }
+              if ($role) {
+                $roleDisplayName = $role.displayName
+              } else {
+                $roleDisplayName = "Unknown/Default ($assignmentRoleId)"
+              }
+              Write-Host "    - Principal: $($assignment.principalDisplayName) ($($assignment.principalId)) → Role: $roleDisplayName"
+            }
+          } else {
+            Write-Host "  No existing assignments found"
+          }
+
+          # Step 5: Build list of desired assignments (role ID + group ID pairs)
+          Write-Host "`n[Step 5] Building desired assignments list..."
+          $desiredAssignments = @()
+          foreach ($mapping in $roleGroupMappings.GetEnumerator()) {
+            $roleValue = $mapping.Key
+            $groupObjectId = $mapping.Value
+
+            # Skip if group ID is empty or contains unreplaced variable
+            if ([string]::IsNullOrWhiteSpace($groupObjectId) -or 
+                $groupObjectId -match '^\$\{\{' -or 
+                $groupObjectId -match '^\$\(') {
+              Write-Warning "  ⚠ Skipping role '$roleValue' - Group Object ID not configured"
+              continue
+            }
+
+            # Find the app role by value
+            $appRole = $appRoles | Where-Object { $_.value -eq $roleValue }
+            
+            if (-not $appRole) {
+              Write-Warning "  ⚠ Skipping - App role '$roleValue' not found or not enabled"
+              continue
+            }
+
+            $desiredAssignments += @{
+              "appRoleId" = $appRole.id
+              "appRoleValue" = $roleValue
+              "appRoleDisplayName" = $appRole.displayName
+              "groupObjectId" = $groupObjectId
+            }
+            Write-Host "  ✓ Role '$roleValue' ($($appRole.id)) → Group '$groupObjectId'"
+          }
+
+          # Step 6: Process assignments - Add new, keep existing, remove orphaned
+          Write-Host "`n[Step 6] Processing role assignments..."
+          
+          $successCount = 0
+          $skipCount = 0
+          $failCount = 0
+          $removeCount = 0
+
+          # 6a: Add new assignments
+          foreach ($desired in $desiredAssignments) {
+            $appRoleId = $desired.appRoleId
+            $groupObjectId = $desired.groupObjectId
+            $roleValue = $desired.appRoleValue
+
+            Write-Host "`n  Processing: Role '$roleValue' → Group '$groupObjectId'"
+            Write-Host "    App Role ID: $appRoleId"
+
+            # Check if assignment already exists
+            $existingAssignment = $existingAssignments | Where-Object { 
+              $_.appRoleId -eq $appRoleId -and $_.principalId -eq $groupObjectId 
+            }
+
+            if ($existingAssignment) {
+              Write-Host "    ✓ Assignment already exists - skipping" -ForegroundColor Yellow
+              $skipCount++
+              continue
+            }
+
+            # Create the assignment
+            $body = @{
+              principalId = $groupObjectId
+              resourceId  = $spnObjectId
+              appRoleId   = $appRoleId
+            } | ConvertTo-Json -Compress
+
+            $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$spnObjectId/appRoleAssignments"
+
+            Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Post" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+              
+              if ($result.StatusCode -eq 201 -or $result.StatusCode -eq 200) {
+                Write-Host "    ✓ Successfully assigned" -ForegroundColor Green
+                $successCount++
+              } else {
+                $content = $result.Content | ConvertFrom-Json
+                Write-Warning "    ✗ Failed: $($content.error.message)"
+                $failCount++
+              }
+            }
+            Catch {
+              Write-Warning "    ✗ Failed: $($_.Exception.Message)"
+              $failCount++
+            }
+          }
+
+          # 6b: Remove orphaned assignments (exist but not in desired list)
+          Write-Host "`n[Step 7] Checking for orphaned assignments to remove..."
+          
+          if ($existingAssignments -and $existingAssignments.Count -gt 0) {
+            foreach ($existing in $existingAssignments) {
+              # Check if this assignment is in our desired list
+              $isDesired = $desiredAssignments | Where-Object { 
+                $_.appRoleId -eq $existing.appRoleId -and $_.groupObjectId -eq $existing.principalId 
+              }
+
+              if (-not $isDesired) {
+                # Get role name for display
+                $existingRoleId = $existing.appRoleId
+                $role = $appRoles | Where-Object { $_.id -eq $existingRoleId }
+                if ($role) {
+                  $roleDisplayName = $role.displayName
+                  $roleValue = $role.value
+                } else {
+                  $roleDisplayName = "Unknown"
+                  $roleValue = "unknown"
+                }
+
+                Write-Host "  Removing orphaned assignment:" -ForegroundColor Red
+                Write-Host "    Principal: $($existing.principalDisplayName) ($($existing.principalId))"
+                Write-Host "    Role: $roleDisplayName ($roleValue)"
+                Write-Host "    Assignment ID: $($existing.id)"
+
+                # Delete the assignment
+                $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$spnObjectId/appRoleAssignedTo/$($existing.id)"
+
+                Try {
+                  $result = Invoke-WebRequest -Uri $uri -Method "Delete" -Headers $headers -UseBasicParsing -SkipHttpErrorCheck
+                  
+                  if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+                    Write-Host "    ✓ Successfully removed" -ForegroundColor Green
+                    $removeCount++
+                  } else {
+                    $content = $result.Content | ConvertFrom-Json
+                    Write-Warning "    ✗ Failed to remove: $($content.error.message)"
+                    $failCount++
+                  }
+                }
+                Catch {
+                  Write-Warning "    ✗ Failed to remove: $($_.Exception.Message)"
+                  $failCount++
+                }
+              }
+            }
+          } else {
+            Write-Host "  No existing assignments to check for removal"
+          }
+
+          # Step 8: Summary
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "Assignment Summary" -ForegroundColor Cyan
+          Write-Host "=========================================="
+          Write-Host "  ✓ New assignments created: $successCount" -ForegroundColor Green
+          Write-Host "  → Already existed/skipped: $skipCount" -ForegroundColor Yellow
+          Write-Host "  ✗ Removed orphaned: $removeCount" -ForegroundColor Red
+          Write-Host "  ✗ Failed: $failCount" -ForegroundColor Red
+          Write-Host "=========================================="
+
+          # Step 9: Show final state
+          Write-Host "`n[Final State] Current role assignments:"
+          $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$spnObjectId/appRoleAssignedTo"
+          $finalAssignments = (Invoke-RestMethod -Uri $uri -Method "Get" -Headers $headers).value
+
+          if ($finalAssignments -and $finalAssignments.Count -gt 0) {
+            foreach ($assignment in $finalAssignments) {
+              # Safely get role name - store in variable first
+              $assignmentRoleId = $assignment.appRoleId
+              $role = $appRoles | Where-Object { $_.id -eq $assignmentRoleId }
+              if ($role -and $role.displayName) {
+                $roleName = $role.displayName
+              } else {
+                $roleName = "Default Access"
+              }
+              
+              Write-Host "  - $($assignment.principalDisplayName)" -ForegroundColor Cyan
+              Write-Host "    Role: $roleName"
+              Write-Host "    Principal ID: $($assignment.principalId)"
+              Write-Host ""
+            }
+          } else {
+            Write-Host "  No assignments found"
+          }
+
+          Write-Host "=========================================="
+          
+          if ($failCount -gt 0) {
+            Write-Error "Some operations failed. Please check the logs above."
+            exit 1
+          }
+
+# Replace with proper OIDC/OAuth2 Web App configuration
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Configure Web App Redirect URIs and Authentication
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+
+          Write-Host "=========================================="
+          Write-Host "Configuring Grafana for OIDC/OAuth2"
+          Write-Host "=========================================="
+          
+          # Step 1: Set Redirect URIs (Web platform)
+          Write-Host "`n[Step 1] Setting Web Redirect URIs..."
+          $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)"
+          
+          $body = @{
+            "web" = @{
+              "redirectUris" = @(
+                "https://grafana-akscp-we-d.nl.eu.abnamro.com/login/azuread"
+              )
+              "homePageUrl" = "https://grafana-akscp-we-d.nl.eu.abnamro.com"
+              "implicitGrantSettings" = @{
+                "enableIdTokenIssuance" = $true
+                "enableAccessTokenIssuance" = $false
+              }
+            }
+            "identifierUris" = @("api://$(appId)")
+            "groupMembershipClaims" = "ApplicationGroup"
+            "isFallbackPublicClient" = $false
+          } | ConvertTo-Json -Depth 99 -Compress
+
+          Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+              
+              if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+                Write-Host "✓ Successfully configured Web redirect URIs" -ForegroundColor Green
+                Write-Host "  - Production: https://grafana-akscp-we-d.nl.eu.abnamro.com/login/azuread"
+              } else {
+                Write-Warning "Unexpected status code: $($result.StatusCode)"
+                Write-Host $result.Content
+              }
+          }
+          Catch {
+              $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+              $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+              $streamReader.Close()
+              Write-Error "Setting Web redirect URIs failed. Error: '$($errResp.error.message)'."
+          }
+
+          # Step 2: Set Token Version to v2
+          Write-Host "`n[Step 2] Setting token version to v2..."
+          $body = @{
+            "api" = @{
+              "requestedAccessTokenVersion" = 2
+            }
+          } | ConvertTo-Json -Depth 99 -Compress
+
+          Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+              
+              if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+                Write-Host "✓ Successfully set token version to v2" -ForegroundColor Green
+              }
+          }
+          Catch {
+              $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+              $errResp = $streamReader.ReadToEnd() | ConvertFrom-Json
+              $streamReader.Close()
+              Write-Error "Setting token version failed. Error: '$($errResp.error.message)'."
+          }
+
+          # Step 3: Get Application Details for Summary
+          Write-Host "`n[Step 3] Retrieving application details..."
+          $uri = "https://graph.microsoft.com/v1.0/applications/$(appObjectId)"
+          $appDetails = Invoke-RestMethod -Uri $uri -Method "Get" -Headers $headers
+          
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "Grafana App Registration Summary" -ForegroundColor Cyan
+          Write-Host "=========================================="
+          Write-Host ""
+          Write-Host "Application Name: $($appDetails.displayName)"
+          Write-Host "Application (client) ID: $(appId)" -ForegroundColor Yellow
+          Write-Host "Directory (tenant) ID: 3a15904d-3fd9-4256-a753-beb05cdf0c6d" -ForegroundColor Yellow
+          Write-Host ""
+          Write-Host "OIDC Discovery Endpoint:" -ForegroundColor Cyan
+          Write-Host "  https://login.microsoftonline.com/3a15904d-3fd9-4256-a753-beb05cdf0c6d/v2.0/.well-known/openid-configuration" -ForegroundColor Yellow
+          Write-Host ""
+          Write-Host "Redirect URIs (Web):" -ForegroundColor Cyan
+          $appDetails.web.redirectUris | ForEach-Object {
+            Write-Host "  - $_"
+          }
+          Write-Host ""
+          Write-Host "Logout URL:" -ForegroundColor Cyan
+          Write-Host "  - $($appDetails.web.logoutUrl)"
+          Write-Host ""
+          Write-Host "App Roles:" -ForegroundColor Cyan
+          $appDetails.appRoles | Where-Object { $_.isEnabled } | ForEach-Object {
+            Write-Host "  - $($_.displayName) (value: $($_.value))"
+          }
+          Write-Host ""
+          Write-Host "Group Membership Claims: $($appDetails.groupMembershipClaims)" -ForegroundColor Cyan
+          Write-Host "Token Version: v$($appDetails.api.requestedAccessTokenVersion)" -ForegroundColor Cyan
+          Write-Host ""
+          Write-Host "=========================================="
+          Write-Host "Next Steps:" -ForegroundColor Yellow
+          Write-Host "=========================================="
+          Write-Host "1. Create a client secret (already done in previous task)"
+          Write-Host "2. Assign users to app roles in Azure Portal:"
+          Write-Host "   Enterprise Applications > $($appDetails.displayName) > Users and groups"
+          Write-Host "3. Update Grafana values.yaml or grafana.ini with:"
+          Write-Host "   [auth.azure AD]"
+          Write-Host "     name = Azure AD"
+          Write-Host "     allow_sign_up = true"
+          Write-Host "     client_id = $(appId)"
+          Write-Host "     client_secret = <client-secret>"
+          Write-Host "     scopes = openid profile email"
+          Write-Host "     authurl = https://login.microsoftonline.com/3a15904d-3fd9-4256-a753-beb05cdf0c6d/oauth2/v2.0/authorize"
+          Write-Host "     token_url = https://login.microsoftonline.com/3a15904d-3fd9-4256-a753-beb05cdf0c6d/oauth2/v2.0/token"
+          Write-Host "     login_getting_started_link = https://grafana.com/docs/grafana/latest/setup-grafana/configure-authentication/azuread/"
+          Write-Host "=========================================="
+
+    - task: AzurePowerShell@5
+      enabled: true
+      displayName: Remove SAML Configuration (if exists)
+      inputs:
+        azureSubscription: ${{ variables.resourceGroupName }}
+        ScriptType: 'InlineScript'
+        azurePowerShellVersion: 'LatestVersion'
+        pwsh: true
+        Inline: |
+          [SecureString]$secureToken = (Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -AsSecureString).Token
+          [String]$token = (ConvertFrom-SecureString -SecureString $secureToken -AsPlainText)
+          
+          $headers = @{
+              "Authorization" = "Bearer $token"
+              "Content-Type"  = "application/json"
+          }
+
+          Write-Host "Removing SAML configuration (if exists)..."
+          
+          # Reset SSO mode from SAML to OIDC
+          $uri = "https://graph.microsoft.com/v1.0/servicePrincipals/$(spnObjectId)"
+          
+          $body = @{
+            "preferredSingleSignOnMode" = $null  # Remove SAML preference
+          } | ConvertTo-Json -Depth 99 -Compress
+
+          Try {
+              $result = Invoke-WebRequest -Uri $uri -Method "Patch" -Headers $headers -Body $body -UseBasicParsing -SkipHttpErrorCheck
+              
+              if ($result.StatusCode -eq 204 -or $result.StatusCode -eq 200) {
+                Write-Host "✓ Successfully removed SAML SSO mode preference" -ForegroundColor Green
+                Write-Host "  Application is now configured for OIDC/OAuth2" -ForegroundColor Green
+              }
+          }
+          Catch {
+              Write-Warning "Could not remove SAML configuration (may not exist): $($_.Exception.Message)"
+          }
+
+
