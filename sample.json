@@ -114,7 +114,7 @@ image:
   #   - myRegistrKeySecretName
 
 testFramework:
-  enabled: true
+  enabled: false
   ## The type of Helm hook used to run this test. Defaults to test.
   ## ref: https://helm.sh/docs/topics/charts_hooks/#the-available-hooks
   ##
@@ -424,7 +424,7 @@ extraContainerVolumes: []
 ##
 persistence:
   type: pvc
-  enabled: false
+  enabled: true
   # storageClassName: default
   ## (Optional) Use this to bind the claim to an existing PersistentVolume (PV) by name.
   volumeName: ""
@@ -904,6 +904,7 @@ grafana.ini:
   grafana_net:
     url: https://grafana.net
   server:
+    root_url: https://grafana-akscp-we-d.nl.eu.abnamro.com
     domain: "{{ if (and .Values.ingress.enabled .Values.ingress.hosts) }}{{ tpl (.Values.ingress.hosts | first) . }}{{ else }}''{{ end }}"
   protocol: https
   cert_file: /run/secrets/vault.azure.com/ingress-tls-certs/tls.crt
@@ -915,6 +916,19 @@ grafana.ini:
     managed_identity_tenant_id: 3a15904d-3fd9-4256-a753-beb05cdf0c6d
   auth:
     azure_auth_enabled: true
+    disable_login_form: false           # Keeps local admin login available
+
+  auth.azuread:
+    enabled: true
+    allow_sign_up: true
+    auto_login: false
+    name: "Azure AD"
+    scopes: openid email profile
+    auth_url: https://login.microsoftonline.com/3a15904d-3fd9-4256-a753-beb05cdf0c6d/oauth2/v2.0/authorize
+    token_url: https://login.microsoftonline.com/3a15904d-3fd9-4256-a753-beb05cdf0c6d/oauth2/v2.0/token
+    client_id: $__file{/mnt/secrets-store/grafana-client-id}
+    client_secret: $__file{/mnt/secrets-store/akscp-d-grafana}
+    allowed_organizations: 3a15904d-3fd9-4256-a753-beb05cdf0c6d
 ## grafana Authentication can be enabled with the following values on grafana.ini
  # server:
       # The full public facing url you use in browser, used for redirects and emails
@@ -1665,6 +1679,12 @@ extraObjects:
             - |
               objectName: ingress-tls-certs
               objectType: secret
+            - |
+              objectName: grafana-client-id
+              objectType: secret
+            - |
+              objectName: akscp-d-grafana
+              objectType: secret
       secretObjects:
         - secretName: ingress-tls-certs
           type: kubernetes.io/tls
@@ -1673,6 +1693,13 @@ extraObjects:
               objectName: ingress-tls-certs
             - key: tls.key
               objectName: ingress-tls-certs
+        - secretName: grafana-client-id
+          type: Opaque
+          data:
+            - key: grafana-client-id
+              objectName: grafana-client-id
+            - key: akscp-d-grafana                        # Grafana ClientID secret in AKV
+              objectName: akscp-d-grafana
 
 # Examples:
 # extraObjects:
@@ -1707,3 +1734,14 @@ extraObjects:
 # Alternatively, if you wish to allow secret values to be exposed in the rendered grafana.ini configmap,
 # you can disable this check by setting assertNoLeakedSecrets to false.
 assertNoLeakedSecrets: true
+
+
+Events:
+  Type     Reason     Age                From               Message
+  ----     ------     ----               ----               -------
+  Normal   Scheduled  33s                default-scheduler  Successfully assigned monitoring/grafana-b7bc68fdd-pw225 to aks-system-16979277-vmss000000
+  Normal   Pulling    20s (x2 over 32s)  kubelet            Pulling image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1"
+  Warning  Failed     19s (x2 over 32s)  kubelet            Failed to pull image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": rpc error: code = NotFound desc = failed to pull and unpack image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": failed to resolve reference "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1: not found
+  Warning  Failed     19s (x2 over 32s)  kubelet            Error: ErrImagePull
+  Normal   BackOff    7s (x2 over 31s)   kubelet            Back-off pulling image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1"
+  Warning  Failed     7s (x2 over 31s)   kubelet            Error: ImagePullBackOff
