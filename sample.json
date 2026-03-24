@@ -462,7 +462,7 @@ initChownData:
   ## If false, data ownership will not be reset at startup
   ## This allows the grafana-server to be run with an arbitrary user
   ##
-  enabled: true
+  enabled: false
 
   ## initChownData container image
   ##
@@ -916,7 +916,7 @@ grafana.ini:
     managed_identity_tenant_id: 3a15904d-3fd9-4256-a753-beb05cdf0c6d
   auth:
     azure_auth_enabled: true
-    disable_login_form: false           # Keeps local admin login available
+    disable_login_form: false           # Keeps local admin login available. Turn this is to "true" if you don't want to see the local admin prompt.
 
   auth.azuread:
     enabled: true
@@ -1734,14 +1734,3 @@ extraObjects:
 # Alternatively, if you wish to allow secret values to be exposed in the rendered grafana.ini configmap,
 # you can disable this check by setting assertNoLeakedSecrets to false.
 assertNoLeakedSecrets: true
-
-
-Events:
-  Type     Reason     Age                From               Message
-  ----     ------     ----               ----               -------
-  Normal   Scheduled  33s                default-scheduler  Successfully assigned monitoring/grafana-b7bc68fdd-pw225 to aks-system-16979277-vmss000000
-  Normal   Pulling    20s (x2 over 32s)  kubelet            Pulling image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1"
-  Warning  Failed     19s (x2 over 32s)  kubelet            Failed to pull image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": rpc error: code = NotFound desc = failed to pull and unpack image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": failed to resolve reference "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1": p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1: not found
-  Warning  Failed     19s (x2 over 32s)  kubelet            Error: ErrImagePull
-  Normal   BackOff    7s (x2 over 31s)   kubelet            Back-off pulling image "p-nexus-3.development.nl.eu.abnamro.com:18443/library/busybox:1.31.1"
-  Warning  Failed     7s (x2 over 31s)   kubelet            Error: ImagePullBackOff
