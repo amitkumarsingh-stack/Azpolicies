@@ -1,8 +1,7 @@
 sum by(instance)(
-  irate(container_cpu_usage_seconds_total{container!=""}[2m])
+  container_memory_working_set_bytes{container!=""}
 )
 /
-sum by(instance)(
-  irate(node_cpu_seconds_total{mode!="idle"}[2m])
-)
+on() group_left()
+sum(kube_node_status_allocatable{resource="memory"})
 * 100
