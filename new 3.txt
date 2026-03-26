@@ -1,26 +1,7 @@
-Step 1: Create Managed Identity & Role Based access on Azure Managed Prometheus
-Repo: akscp-infra-pipeline
-Pipeline: akscp-aks-build
-Stage: deploy_umi_grafana (Creates Managed Identity)
-Stage: deploy_rbac (To provide Role based access on Prometheus)
-
-Step 2: Create SSL certs for Grafana
-Repo: akscp-infra-foundation-templates
-Pipeline: infra-g3-certificate-pipeline
-
-Step 3: Register DNS
-ServiceNow Portal
-
-Step 4: Grafana App Registration
-Repo: akcp-infra-pipeline
-Pipeline: Grafana-app-registration
-
-Step 5: Deploy Grafana on Central Cluster
-Repo: akscp-monitoring-setup
-Pipeline: akscp-aks-build
-
-Step 6: Network policies
-Repo: akscp-network-setup
-Pipeline: ?
-
-
+sum by(instance)(
+  irate(container_cpu_usage_seconds_total{container!=""}[2m])
+)
+/
+on() group_left()
+sum(kube_node_status_allocatable{resource="cpu"})
+* 100
