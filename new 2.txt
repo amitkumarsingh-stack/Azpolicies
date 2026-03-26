@@ -2,8 +2,6 @@ sum by(instance)(
   irate(container_cpu_usage_seconds_total{container!=""}[2m])
 )
 /
-on(instance) group_left()
-sum by(node)(
-  kube_node_status_allocatable{resource="cpu"}
-)
+on() group_left()
+sum(kube_node_status_allocatable{resource="cpu"})
 * 100
