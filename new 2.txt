@@ -1,2 +1,9 @@
-Key Limitation to Know
-The AD group → Grafana team sync only triggers on user login in OSS Grafana. Users won't appear in a team until they've logged in at least once. If you need proactive sync without login, the script in Option A is the way to go, ideally run as a CronJob in your cluster.
+sum by(instance)(
+  irate(container_cpu_usage_seconds_total{container!=""}[2m])
+)
+/
+on(instance) group_left()
+sum by(node)(
+  kube_node_status_allocatable{resource="cpu"}
+)
+* 100
