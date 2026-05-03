@@ -5,3 +5,4 @@ sum by(instance)(
 on() group_left()
 sum(kube_node_status_allocatable{resource="memory"})
 * 100
+
