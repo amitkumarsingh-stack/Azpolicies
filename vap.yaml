@@ -1,0 +1,124 @@
+# ==============================================================================
+# ValidatingAdmissionPolicy — Enforce required labels on Deployments
+#
+# Requires: Kubernetes 1.26+ (beta), 1.28+ (GA)
+#
+# Rules:
+#   - All Deployments must have the following labels:
+#       - app
+#       - env
+#       - owner
+#   - Excludes: kube-system namespace
+# ==============================================================================
+
+---
+# The policy definition — contains the CEL validation rules
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-deployment-labels
+spec:
+
+  # -- What triggers this policy
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["apps"]
+        apiVersions: ["v1"]
+        resources:   ["deployments"]
+        operations:  ["CREATE", "UPDATE"]
+
+  # -- Exclude kube-system and other system namespaces
+  matchConditions:
+    - name: exclude-kube-system
+      expression: "request.namespace != 'kube-system'"
+    - name: exclude-default
+      expression: "request.namespace != 'default'"
+    - name: exclude-kube-node-lease
+      expression: "request.namespace != 'kube-node-lease'"
+    - name: exclude-kube-public
+      expression: "request.namespace != 'kube-public'"
+
+  # -- Variables (reusable across validations)
+  variables:
+    - name: deploymentLabels
+      expression: "object.metadata.labels"
+
+  # -- CEL validation rules
+  validations:
+
+    - expression: >
+        has(variables.deploymentLabels) &&
+        'oraid' in variables.deploymentLabels &&
+        variables.deploymentLabels['oraid'] != ''
+      message: "Deployment must have a non-empty 'oraid' label."
+      reason: Invalid
+
+    - expression: >
+        has(variables.deploymentLabels) &&
+        'NFS-Function' in variables.deploymentLabels &&
+        variables.deploymentLabels['NFS-Function'] != ''
+      message: "Deployment must have a non-empty 'NFS-Function' label (e.g. Application or Presentation)."
+      reason: Invalid
+
+    # -- Optional: enforce allowed values for 'env'
+    - expression: >
+        !has(variables.deploymentLabels) ||
+        !('env' in variables.deploymentLabels) ||
+        variables.deploymentLabels['env'] in ['dev', 'staging', 'prod']
+      message: "Label 'env' must be one of: dev, staging, prod."
+      reason: Invalid
+
+---
+# The binding — connects the policy to a scope (cluster-wide here)
+# Without a binding the policy is defined but never enforced
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-deployment-labels-binding
+spec:
+  policyName: require-deployment-labels
+
+  # -- Enforce mode: Deny the request if validation fails
+  # Use `Audit` first to test without blocking, then switch to `Deny`
+  validationActions: [Deny]
+
+  # -- Scope: apply to all namespaces (kube-system excluded via matchConditions above)
+  matchResources: {}
+
+---
+# ==============================================================================
+# AUDIT MODE BINDING (optional — use during rollout to see violations first)
+# Deploy this instead of the Deny binding above to test without blocking
+# ==============================================================================
+# apiVersion: admissionregistration.k8s.io/v1
+# kind: ValidatingAdmissionPolicyBinding
+# metadata:
+#   name: require-deployment-labels-binding-audit
+# spec:
+#   policyName: require-deployment-labels
+#   validationActions: [Audit]  # logs to audit log, does NOT block requests
+#   matchResources: {}
+## For testing
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-valid-deployment
+  namespace: test
+  labels:
+    oraid: test123
+    env: prod
+    owner: platform-team
+    NFS-Function: Application
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test-valid
+  template:
+    metadata:
+      labels:
+        app: test-valid
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:latest
