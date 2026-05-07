@@ -228,3 +228,257 @@ regulated environments
 highly sensitive datasource separation
 
 This avoids turning Grafana administration into a multi-tenant platform problem unnecessarily.
+----------------------------
+More points
+
+Yes — there are several operational and platform-engineering advantages of using Teams that become very important as Grafana adoption grows.
+
+Here are the strongest additional arguments.
+
+1. Lower Operational Overhead
+
+With Teams:
+
+one Org to manage
+one provisioning flow
+one RBAC model
+one alerting environment
+one backup strategy
+
+With Orgs:
+
+repeated setup per org
+repeated permission management
+repeated troubleshooting
+
+Every new Org becomes another mini-Grafana deployment operationally.
+
+2. Easier Infrastructure-as-Code (Terraform/Provisioning)
+
+Using Teams keeps:
+
+dashboards reusable
+provisioning paths consistent
+folder structures standardized
+
+With Orgs:
+
+resources must often be duplicated
+automation needs org awareness
+imports/exports become messy
+UID conflicts become common
+
+Terraform complexity grows significantly with multiple orgs.
+
+3. Easier Onboarding
+
+With Teams:
+
+add user to Team
+done
+
+With Orgs:
+
+assign org role
+explain org switching
+duplicate memberships
+handle “wrong org” confusion
+
+New users regularly get confused by Org context switching.
+
+4. Better User Experience
+
+Teams provide:
+
+seamless navigation
+shared search
+unified dashboard discovery
+shared alert visibility
+
+Orgs create silos:
+
+users cannot easily discover useful dashboards
+duplicate dashboards appear
+collaboration decreases
+
+You lose the “shared observability platform” effect.
+
+5. Avoid Dashboard Duplication
+
+This becomes a major pain later.
+
+Example:
+
+shared Kubernetes dashboards
+shared platform dashboards
+shared infra dashboards
+
+With Teams:
+
+reuse once
+
+With Orgs:
+
+copy to every org
+maintain separately
+versions drift over time
+
+This becomes a maintenance nightmare.
+
+6. Easier Standardization
+
+Teams allow:
+
+common dashboard standards
+shared variables
+common alerting patterns
+shared naming conventions
+
+Orgs encourage fragmentation:
+
+each org invents its own structure
+inconsistent observability practices emerge
+
+Platform governance becomes harder.
+
+7. Easier Cross-Team Troubleshooting
+
+Real incidents usually cross boundaries:
+
+networking
+Kubernetes
+databases
+applications
+platform services
+
+With Teams:
+
+everyone can collaborate quickly
+
+With Orgs:
+
+observability becomes siloed
+troubleshooting slows down
+
+Incident response suffers.
+
+8. Alerting Is Simpler
+
+Unified alerting works better with Teams:
+
+centralized routing
+shared contact points
+reusable templates
+
+With Orgs:
+
+duplicated alert definitions
+duplicated notification channels
+duplicated silences/escalations
+
+Operational noise increases.
+
+9. Resource Efficiency
+
+Organizations encourage:
+
+duplicated datasources
+duplicated folders
+duplicated alerts
+duplicated dashboards
+
+Teams encourage reuse.
+
+This matters a lot at scale.
+
+10. Better for Internal Platform Culture
+
+Teams support:
+
+“Grafana is a shared engineering platform.”
+
+Orgs support:
+
+“Every group is its own tenant.”
+
+For internal engineering organizations, the first model usually creates better collaboration and maturity.
+
+11. Orgs Are Often a Legacy Pattern
+
+Historically many people used Orgs because:
+
+folder permissions were weaker
+Teams were less mature
+old Grafana versions lacked features
+
+Modern Grafana usage trends toward:
+
+single Org
+Teams
+folders
+RBAC
+
+especially for internal platforms.
+
+12. Easier Migration Later
+
+Moving:
+
+Teams → Orgs later is possible
+
+Moving:
+
+Many Orgs → unified Teams later is painful
+
+Starting simple is strategically safer.
+
+13. Plugin and Upgrade Management Is Cleaner
+
+Even with Orgs:
+
+plugins are mostly instance-wide
+upgrades are instance-wide
+outages are instance-wide
+
+So Orgs do not provide true infrastructure isolation anyway.
+
+You pay operational cost without full tenant isolation.
+
+14. Reduces “Shadow Observability”
+
+When teams get isolated Orgs:
+
+they often create duplicated dashboards
+duplicated metrics
+inconsistent alerts
+custom hacks
+
+Shared Teams environments naturally encourage reuse and consistency.
+
+15. Easier Global Search and Discoverability
+
+With Teams:
+
+users can search shared dashboards
+platform dashboards become reusable
+best practices spread organically
+
+With Orgs:
+
+knowledge gets trapped inside silos
+
+This hurts observability maturity over time.
+
+Short Executive-Level Argument
+
+You can summarize it like this:
+
+Organizations solve tenant isolation.
+Teams solve collaboration and operational scalability.
+
+If your company is not offering Grafana as a customer-facing multi-tenant SaaS platform, Teams are usually the better engineering choice.
+
+Or even shorter:
+
+Use Orgs for isolation between companies.
+Use Teams for isolation between internal engineering groups.
