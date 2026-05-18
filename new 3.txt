@@ -1,7 +1,28 @@
-sum by(instance)(
-  irate(container_cpu_usage_seconds_total{container!=""}[2m])
-)
-/
-on() group_left()
-sum(kube_node_status_allocatable{resource="cpu"})
-* 100
+Core
+Enforces Azure Policy definitions on AKS clusters via OPA/Gatekeeper engine
+Validates resources at admission — deny non-compliant resource creation/updates
+Audits existing resources in cluster against assigned policy definitions
+Integrates with Azure Policy Initiatives — group multiple policies into one assignment
+Built on OPA Gatekeeper under the hood; runs as a managed add-on in AKS
+
+Enforcement & Compliance
+Audit mode — reports compliance state without blocking deployments
+Deny mode — blocks non-compliant resource creation at admission time
+Compliance dashboard in Azure Portal shows pass/fail per policy per resource
+Automatically re-evaluates compliance on a periodic basis for existing resources
+Compliance data feeds into Microsoft Defender for Cloud secure score
+
+Policy Model & Management
+Policies managed centrally from Azure Portal, Azure CLI, or ARM/Bicep/Terraform
+Built-in policy definitions for common AKS security scenarios out of the box
+Custom policies supported using Rego (via Gatekeeper ConstraintTemplates)
+Policy Initiatives for SOC 2, PCI-DSS, CIS benchmarks — assign with one click
+Assignments scoped at Management Group, Subscription, or Resource Group level
+
+Azure-Native Advantages
+
+Deep integration with Azure RBAC, Azure Monitor, Microsoft Defender for Cloud
+Works across AKS, Arc-enabled Kubernetes (any cluster, any cloud)
+No Prometheus/Grafana needed — compliance natively visible in Azure Portal
+GitOps-friendly: policy assignments via Azure DevOps pipelines or Terraform AzureRM
+Single pane of glass: manage K8s policies alongside all other Azure resource policies
