@@ -1,28 +1,28 @@
 Core
-Enforces Azure Policy definitions on AKS clusters via OPA/Gatekeeper engine
-Validates resources at admission — deny non-compliant resource creation/updates
-Audits existing resources in cluster against assigned policy definitions
-Integrates with Azure Policy Initiatives — group multiple policies into one assignment
-Built on OPA Gatekeeper under the hood; runs as a managed add-on in AKS
+Validates resources at admission using CEL expressions embedded in YAML
+Runs in-process within the API server — no external webhook, no network hop
+ValidatingAdmissionPolicyBinding connects a policy to namespaces/resources
+Parameterization via ParamKind — reuse policies with different ConfigMaps per env
+MutatingAdmissionPolicy available in K8s 1.32+ (same model, for mutations)
 
-Enforcement & Compliance
-Audit mode — reports compliance state without blocking deployments
-Deny mode — blocks non-compliant resource creation at admission time
-Compliance dashboard in Azure Portal shows pass/fail per policy per resource
-Automatically re-evaluates compliance on a periodic basis for existing resources
-Compliance data feeds into Microsoft Defender for Cloud secure score
+Enforcement Modes
+Deny — block the request from persisting
+Warn — allow but surface a warning to the caller
+Audit — record decision to audit log only
+Modes can be combined: e.g. [Warn, Audit] simultaneously
+validationActions field on Binding controls which modes are active
 
-Policy Model & Management
-Policies managed centrally from Azure Portal, Azure CLI, or ARM/Bicep/Terraform
-Built-in policy definitions for common AKS security scenarios out of the box
-Custom policies supported using Rego (via Gatekeeper ConstraintTemplates)
-Policy Initiatives for SOC 2, PCI-DSS, CIS benchmarks — assign with one click
-Assignments scoped at Management Group, Subscription, or Resource Group level
+CEL Expressions
+Familiar syntax similar to JavaScript/Go — easy for existing K8s devs
+Pre-compiled: CEL programs compiled once, execution cost pre-calculated
+Multiple validation expressions per policy, each with own error message
+messageExpression — dynamic error messages using actual resource field values
+has(), size(), matches(), startsWith() and many more built-in functions
 
-Azure-Native Advantages
-
-Deep integration with Azure RBAC, Azure Monitor, Microsoft Defender for Cloud
-Works across AKS, Arc-enabled Kubernetes (any cluster, any cloud)
-No Prometheus/Grafana needed — compliance natively visible in Azure Portal
-GitOps-friendly: policy assignments via Azure DevOps pipelines or Terraform AzureRM
-Single pane of glass: manage K8s policies alongside all other Azure resource policies
+Limitations to Know
+Validation only — no mutation, generation, or image verification natively
+No built-in PolicyReport CRDs — violations go to audit logs or metrics only
+No background scanning of existing resources — admission-time only
+CEL cannot call external services or perform API lookups
+No CLI tooling for shift-left CI testing out of the box
+Requires Kubernetes 1.30+ for stable VAP
