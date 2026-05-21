@@ -1,16 +1,61 @@
-“Good [morning/afternoon/evening] everyone.
+“Before we compare policy engines, it’s important to understand why policy enforcement is critical in Kubernetes, especially in a multi-tenant AKS setup.”
 
-In this session, we’re going to focus on a critical aspect of AKS platform engineering—policy enforcement in a multi-tenant cluster.
+🔐 1. Security Governance in Kubernetes
 
-As you know, in a shared cluster model, we need strong guardrails around things like security controls, resource governance, and workload isolation, while still enabling teams to deploy independently.
+“First is security governance.
 
-The key question we’re addressing today is:
-where and how should these controls be enforced in the Kubernetes control plane?
+In Kubernetes, by default, there are very few restrictions.
+So we need policies to enforce things like:
 
-We’ll evaluate three approaches:
+Running containers as non-root
+Preventing hostPath mounts or access to sensitive nodes
 
-ValidationAdmissionPolicy as a native admission control mechanism,
-Azure Policy add-on for centralized governance and compliance, and
-Kyverno for Kubernetes-native policy-as-code.
+Without these controls, any workload could potentially escalate privileges or compromise the cluster.”
 
-We’ll go beyond features and look at architecture trade-offs—including extensibility, operational overhead, integration with Azure, and impact on developer workflows.
+⚠️ 2. Preventing Misconfigurations
+
+“The second area is misconfiguration prevention, which is actually one of the biggest real-world issues.
+
+For example:
+
+Developers may forget to define CPU and memory limits
+Or skip resource quotas
+
+This can lead to resource starvation, noisy neighbor problems, or even cluster instability.
+Policies act as a safety net to enforce these defaults consistently.”
+
+🏢 3. Multi-Tenant Cluster Safety
+
+“Now, in a multi-tenant cluster, this becomes even more critical.
+
+We need strict boundaries between teams:
+
+Namespace isolation
+Resource consumption limits
+RBAC controls
+
+Policy enforcement ensures that one team’s workload cannot impact another—either from a security or resource perspective.”
+
+⚙️ 4. Operational Reliability
+
+“Next is operational reliability.
+
+Policies help enforce production-grade practices like:
+
+Blocking deployments without resource limits
+Preventing use of latest image tags
+Enforcing replica counts for high availability
+
+So instead of relying on manual reviews, we bake reliability into the platform itself.”
+
+📈 5. Scalable Platform Engineering
+
+“Finally, from a platform engineering standpoint, policies enable scalability.
+
+We can:
+
+Define version-controlled rules
+Integrate with GitOps workflows
+Ensure consistent enforcement across clusters
+
+This is what allows us to standardize governance as we scale across multiple environments and teams.”
