@@ -1,101 +1,98 @@
-“Now let’s bring everything together with a feature comparison across all three approaches.
+During this sprint, I worked on a SPIKE activity to evaluate Kyverno for Kubernetes policy management in our AKS environment.
 
-Instead of going line by line, I’ll highlight the key architectural differences that actually influence decision-making.”
+The goal was to understand how Kyverno can help us enforce security, governance, and operational standards across Kubernetes clusters, and also compare it with the existing Azure Policy Add-on approach.”
 
-🧠 1. Policy Language & Learning Curve
+Objective of the Spike
 
-“If we start with policy language:
+“The main objectives of this spike were:
 
-Kyverno → YAML-based, very Kubernetes-friendly
-Azure Policy → Rego + JSON, slightly steeper learning curve
-VAP → CEL, lightweight but less expressive
+To evaluate Kyverno as a Kubernetes-native policy engine
+To understand how it enforces security and governance policies
+To compare it with alternative solutions like Azure Policy Add-on
+And finally, to check whether it is feasible and beneficial for our AKS platform”
+Why Kubernetes Policies Are Important
 
-👉 So from a team perspective:
+“As Kubernetes environments scale, managing security and governance manually becomes difficult.
 
-Kyverno is easiest for platform + dev teams
-Azure Policy requires OPA/Rego knowledge
-VAP is simple but limited in complexity”
-⚙️ 2. Capability Depth (This is critical)
+Policies help us:
 
-“This is where the biggest differences are:
+Prevent insecure configurations
+Enforce organization-wide standards
+Ensure compliance and governance requirements
+And reduce manual reviews and operational effort
 
-Kyverno → Full capabilities:
-Validation
-Mutation
-Generation
-Cleanup
-Azure Policy → Strong in:
-Validation
-Audit
-Compliance
-But limited mutation, no generation
-VAP →
-Validation only (with limited mutation support emerging)
+For example, policies can prevent containers from running as privileged users, enforce resource limits, or ensure approved container registries are used.”
 
-👉 So:
+What is Kyverno
 
-If you need automation → Kyverno
-If you need governance → Azure Policy
-If you need lightweight guardrails → VAP”
-📊 3. Compliance & Reporting
+“Kyverno is a Kubernetes-native policy engine.
 
-“This is another major differentiator:
+One major advantage is that it uses YAML, so Kubernetes administrators and DevOps engineers do not need to learn a separate language like Rego.
 
-Azure Policy → Best-in-class compliance dashboards (Azure Portal)
-Kyverno → Kubernetes-native reporting (OpenReports, dashboards)
-VAP → No native reporting, only logs
+Kyverno works through Kubernetes admission controllers, meaning it can validate or modify resources during deployment itself.
 
-👉 So for:
+Another benefit is that policies are written just like standard Kubernetes manifests, making adoption easier for platform teams.”
 
-Auditors / compliance teams → Azure Policy
-Platform teams → Kyverno
-VAP alone is not sufficient”
-🔄 4. Background Scanning
+Key Features
 
-“This is often overlooked but very important:
+“Some key features I explored are:
 
-Kyverno → Continuous background scanning
-Azure Policy → Periodic compliance evaluation
-VAP → No background scanning
+Validate
 
-👉 Meaning:
+Kyverno can validate resources against defined rules.
+For example, ensuring every deployment has labels, resource limits, or approved images.
 
-VAP only checks new requests
-It doesn’t help with existing drift in the cluster”
-🏗️ 5. Architecture & Operations
+Mutate
 
-“From an architecture standpoint:
+It can automatically modify resources before deployment.
+For example, injecting labels, annotations, or security settings automatically.
 
-Kyverno → Runs inside cluster (Helm, GitOps managed)
-Azure Policy → Fully managed by Azure
-VAP → Built into API server (zero overhead)
+Generate
 
-👉 So:
+Kyverno can generate resources automatically.
+For example, creating default network policies or PodDisruptionBudgets when a namespace is created.
 
-Want no ops overhead → VAP
-Want Azure-managed governance → Azure Policy
-Want flexibility → Kyverno”
-🌍 6. GitOps & Multi-Cloud
+Background Scanning
 
-“Finally:
+It can also scan existing resources continuously and report non-compliant workloads.”
 
-Kyverno → Excellent for GitOps & multi-cloud
-VAP → Also GitOps-friendly, but limited features
-Azure Policy → Azure-centric
+Comparison: Kyverno vs Azure Policy Add-on
 
-👉 So if you’re building a platform beyond Azure, Kyverno or VAP makes more sense.”
+“I also compared Kyverno with Azure Policy Add-on.
 
-🧠 Final Architect Summary (This is your power statement)
+Language
 
-“So if I summarize this from an architecture perspective:
+Kyverno uses YAML, which is easier for Kubernetes teams.
+Azure Policy Add-on relies on Rego-based policies internally.
 
-Kyverno → Best for platform engineering & automation
-Azure Policy → Best for enterprise governance & compliance
-VAP → Best for lightweight, native guardrails
+Ease of Use
 
-👉 And in real-world AKS platforms, it’s not about choosing one—
-it’s often about combining them strategically.”
+Kyverno is more developer-friendly and easier to onboard for platform teams.
 
-🔥 Strong Closing Line (Very impactful)
+Installation
 
-“The right choice is not tool-driven—it’s driven by your operating model, governance requirements, and platform maturity.”
+Kyverno is deployed directly inside the cluster.
+Azure Policy Add-on comes with native Azure integration.
+
+Mutation Support
+
+Kyverno supports resource mutation very effectively, while Azure Policy has limited mutation capabilities.
+
+Resource Generation
+
+Kyverno can automatically generate Kubernetes resources, which Azure Policy does not support.”
+
+Benefits Observed
+
+“From this spike, some key benefits observed were:
+
+Easier onboarding because policies are YAML-based
+Faster policy development and troubleshooting
+Better developer and platform engineering experience
+Strong native integration with Kubernetes workflows
+
+Overall, Kyverno provides more flexibility for Kubernetes-native governance and security enforcement.”
+
+Closing
+
+“As a next step, we can evaluate implementing Kyverno policies for security guardrails, governance standards, and compliance checks in AKS clusters alongside existing platform controls.”
