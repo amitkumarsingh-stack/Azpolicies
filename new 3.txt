@@ -1,23 +1,15 @@
-# Patch all mutating webhooks - loop through all webhooks in each config
+# Patch all mutating webhooks directly without counting
 for webhook in $(kubectl get mutatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
   echo "Patching $webhook"
-  count=$(kubectl get mutatingwebhookconfiguration $webhook \
-    -o jsonpath='{.webhooks}' | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-  for i in $(seq 0 $((count-1))); do
-    kubectl patch mutatingwebhookconfiguration $webhook \
-      --type=json \
-      -p="[{\"op\":\"replace\",\"path\":\"/webhooks/$i/failurePolicy\",\"value\":\"Ignore\"}]"
-  done
+  kubectl get mutatingwebhookconfiguration $webhook -o json | \
+    sed 's/"failurePolicy":"Fail"/"failurePolicy":"Ignore"/g' | \
+    kubectl replace -f -
 done
 
 # Patch all validating webhooks
 for webhook in $(kubectl get validatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
   echo "Patching $webhook"
-  count=$(kubectl get validatingwebhookconfiguration $webhook \
-    -o jsonpath='{.webhooks}' | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
-  for i in $(seq 0 $((count-1))); do
-    kubectl patch validatingwebhookconfiguration $webhook \
-      --type=json \
-      -p="[{\"op\":\"replace\",\"path\":\"/webhooks/$i/failurePolicy\",\"value\":\"Ignore\"}]"
-  done
+  kubectl get validatingwebhookconfiguration $webhook -o json | \
+    sed 's/"failurePolicy":"Fail"/"failurePolicy":"Ignore"/g' | \
+    kubectl replace -f -
 done
