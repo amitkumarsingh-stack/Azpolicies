@@ -6,7 +6,7 @@ metadata:
   namespace: kyverno
 spec:
   endpoints:
-  - port: metrics
+  - port: metrics-port
     path: /metrics
     interval: 30s
   namespaceSelector:
@@ -24,7 +24,7 @@ metadata:
   namespace: kyverno
 spec:
   endpoints:
-  - port: metrics
+  - port: metrics-port
     path: /metrics
     interval: 30s
   namespaceSelector:
@@ -42,7 +42,7 @@ metadata:
   namespace: kyverno
 spec:
   endpoints:
-  - port: metrics
+  - port: metrics-port
     path: /metrics
     interval: 30s
   namespaceSelector:
@@ -60,7 +60,7 @@ metadata:
   namespace: kyverno
 spec:
   endpoints:
-  - port: metrics
+  - port: metrics-port
     path: /metrics
     interval: 30s
   namespaceSelector:
