@@ -1,12 +1,8 @@
-helm upgrade kyverno . \
-  -n kyverno \
-  -f values.yaml \
-  --set crds.groups.wgpolicyk8s.policyreports=true \
-  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
-  --set crds.groups.reports.ephemeralreports=true \
-  --set crds.groups.reports.clusterephemeralreports=true \
+# Template the crds subchart directly
+helm template kyverno-crds charts/crds \
+  --set groups.wgpolicyk8s.policyreports=true \
+  --set groups.wgpolicyk8s.clusterpolicyreports=true \
+  --set groups.reports.ephemeralreports=true \
+  --set groups.reports.clusterephemeralreports=true \
   --set reportsServer.enabled=false \
-  --set admissionController.createSelfSignedCert=true \
-  --set crds.migration.enabled=false \
-  --atomic \
-  --timeout 180s
+  | kubectl apply -f -
