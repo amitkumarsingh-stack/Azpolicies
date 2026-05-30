@@ -1,14 +1,12 @@
-# In VS Code open the terminal and run:
-# The files are helm templates so we need to strip the conditionals
-
-# Check what the condition looks like
-head -3 charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_policyreports.yaml
-
-# Strip helm conditionals and apply directly
-sed '/^{{/d' charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_policyreports.yaml | kubectl apply -f -
-
-sed '/^{{/d' charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_clusterpolicyreports.yaml | kubectl apply -f -
-
-sed '/^{{/d' charts/crds/templates/reports.kyverno.io/reports.kyverno.io_ephemeralreports.yaml | kubectl apply -f -
-
-sed '/^{{/d' charts/crds/templates/reports.kyverno.io/reports.kyverno.io_clusterephemeralreports.yaml | kubectl apply -f -
+helm upgrade kyverno . \
+  -n kyverno \
+  -f values.yaml \
+  --set crds.groups.wgpolicyk8s.policyreports=true \
+  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
+  --set crds.groups.reports.ephemeralreports=true \
+  --set crds.groups.reports.clusterephemeralreports=true \
+  --set reportsServer.enabled=false \
+  --set admissionController.createSelfSignedCert=true \
+  --set crds.migration.enabled=false \
+  --atomic \
+  --timeout 180s
