@@ -1,12 +1,34 @@
-# Create a directory
-mkdir -p /tmp/kyverno-crds
-cd /tmp/kyverno-crds
+# Navigate to your kyverno chart directory
+cd ~/akscp/kyverno
 
-# Download the 4 missing CRDs directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/reports.kyverno.io_ephemeralreports.yaml -o ephemeralreports.yaml
+# Render and apply just the CRD templates
+helm template kyverno . \
+  --set crds.install=true \
+  --set crds.groups.reports.clusterephemeralreports=true \
+  --set crds.groups.reports.ephemeralreports=true \
+  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
+  --set crds.groups.wgpolicyk8s.policyreports=true \
+  --set reportsServer.enabled=false \
+  -s charts/crds/templates/reports.kyverno.io/reports.kyverno.io_clusterephemeralreports.yaml \
+  | kubectl apply -f -
 
-curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/reports.kyverno.io_clusterephemeralreports.yaml -o clusterephemeralreports.yaml
+helm template kyverno . \
+  --set crds.install=true \
+  --set crds.groups.reports.ephemeralreports=true \
+  --set reportsServer.enabled=false \
+  -s charts/crds/templates/reports.kyverno.io/reports.kyverno.io_ephemeralreports.yaml \
+  | kubectl apply -f -
 
-curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/wgpolicyk8s.io_policyreports.yaml -o policyreports.yaml
+helm template kyverno . \
+  --set crds.install=true \
+  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
+  --set reportsServer.enabled=false \
+  -s charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_clusterpolicyreports.yaml \
+  | kubectl apply -f -
 
-curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/wgpolicyk8s.io_clusterpolicyreports.yaml -o clusterpolicyreports.yaml
+helm template kyverno . \
+  --set crds.install=true \
+  --set crds.groups.wgpolicyk8s.policyreports=true \
+  --set reportsServer.enabled=false \
+  -s charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_policyreports.yaml \
+  | kubectl apply -f -
