@@ -1,7 +1,4 @@
-# Navigate to your kyverno chart directory
-cd ~/akscp/kyverno
-
-# Render and apply just the CRD templates
+# Use the correct subchart path
 helm template kyverno . \
   --set crds.install=true \
   --set crds.groups.reports.clusterephemeralreports=true \
@@ -9,26 +6,8 @@ helm template kyverno . \
   --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
   --set crds.groups.wgpolicyk8s.policyreports=true \
   --set reportsServer.enabled=false \
-  -s charts/crds/templates/reports.kyverno.io/reports.kyverno.io_clusterephemeralreports.yaml \
-  | kubectl apply -f -
-
-helm template kyverno . \
-  --set crds.install=true \
-  --set crds.groups.reports.ephemeralreports=true \
-  --set reportsServer.enabled=false \
-  -s charts/crds/templates/reports.kyverno.io/reports.kyverno.io_ephemeralreports.yaml \
-  | kubectl apply -f -
-
-helm template kyverno . \
-  --set crds.install=true \
-  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
-  --set reportsServer.enabled=false \
-  -s charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_clusterpolicyreports.yaml \
-  | kubectl apply -f -
-
-helm template kyverno . \
-  --set crds.install=true \
-  --set crds.groups.wgpolicyk8s.policyreports=true \
-  --set reportsServer.enabled=false \
-  -s charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_policyreports.yaml \
+  -s kyverno/charts/crds/templates/reports.kyverno.io/reports.kyverno.io_clusterephemeralreports.yaml \
+  -s kyverno/charts/crds/templates/reports.kyverno.io/reports.kyverno.io_ephemeralreports.yaml \
+  -s kyverno/charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_clusterpolicyreports.yaml \
+  -s kyverno/charts/crds/templates/wgpolicyk8s.io/wgpolicyk8s.io_policyreports.yaml \
   | kubectl apply -f -
