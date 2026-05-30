@@ -1,29 +1,73 @@
-# nginx-config.yaml
-apiVersion: v1
-kind: ConfigMap
+cat <<EOF | kubectl apply -f -
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
 metadata:
-  name: nginx-config
-data:
-  default.conf: |
-    server {
-      listen              443 ssl;
-      server_name         nginx.local;
-
-      ssl_certificate     /etc/nginx/ssl/tls.crt;
-      ssl_certificate_key /etc/nginx/ssl/tls.key;
-
-      root /usr/share/nginx/html;
-      index index.html;
-
-      location / {
-        try_files $uri $uri/ =404;
-      }
-    }
-  index.html: |
-    <!DOCTYPE html>
-    <html>
-    <head><title>Welcome</title></head>
-    <body>
-      <h1>Hello from NGINX over HTTPS!</h1>
-    </body>
-    </html>
+  name: kyverno-admission-controller
+  namespace: kyverno
+spec:
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - kyverno
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: admission-controller
+      app.kubernetes.io/instance: kyverno
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kyverno-background-controller
+  namespace: kyverno
+spec:
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - kyverno
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: background-controller
+      app.kubernetes.io/instance: kyverno
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kyverno-cleanup-controller
+  namespace: kyverno
+spec:
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - kyverno
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cleanup-controller
+      app.kubernetes.io/instance: kyverno
+---
+apiVersion: azmonitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kyverno-reports-controller
+  namespace: kyverno
+spec:
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+  namespaceSelector:
+    matchNames:
+    - kyverno
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: reports-controller
+      app.kubernetes.io/instance: kyverno
+EOF
