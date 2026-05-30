@@ -1,98 +1,12 @@
-During this sprint, I worked on a SPIKE activity to evaluate Kyverno for Kubernetes policy management in our AKS environment.
-
-The goal was to understand how Kyverno can help us enforce security, governance, and operational standards across Kubernetes clusters, and also compare it with the existing Azure Policy Add-on approach.”
-
-Objective of the Spike
-
-“The main objectives of this spike were:
-
-To evaluate Kyverno as a Kubernetes-native policy engine
-To understand how it enforces security and governance policies
-To compare it with alternative solutions like Azure Policy Add-on
-And finally, to check whether it is feasible and beneficial for our AKS platform”
-Why Kubernetes Policies Are Important
-
-“As Kubernetes environments scale, managing security and governance manually becomes difficult.
-
-Policies help us:
-
-Prevent insecure configurations
-Enforce organization-wide standards
-Ensure compliance and governance requirements
-And reduce manual reviews and operational effort
-
-For example, policies can prevent containers from running as privileged users, enforce resource limits, or ensure approved container registries are used.”
-
-What is Kyverno
-
-“Kyverno is a Kubernetes-native policy engine.
-
-One major advantage is that it uses YAML, so Kubernetes administrators and DevOps engineers do not need to learn a separate language like Rego.
-
-Kyverno works through Kubernetes admission controllers, meaning it can validate or modify resources during deployment itself.
-
-Another benefit is that policies are written just like standard Kubernetes manifests, making adoption easier for platform teams.”
-
-Key Features
-
-“Some key features I explored are:
-
-Validate
-
-Kyverno can validate resources against defined rules.
-For example, ensuring every deployment has labels, resource limits, or approved images.
-
-Mutate
-
-It can automatically modify resources before deployment.
-For example, injecting labels, annotations, or security settings automatically.
-
-Generate
-
-Kyverno can generate resources automatically.
-For example, creating default network policies or PodDisruptionBudgets when a namespace is created.
-
-Background Scanning
-
-It can also scan existing resources continuously and report non-compliant workloads.”
-
-Comparison: Kyverno vs Azure Policy Add-on
-
-“I also compared Kyverno with Azure Policy Add-on.
-
-Language
-
-Kyverno uses YAML, which is easier for Kubernetes teams.
-Azure Policy Add-on relies on Rego-based policies internally.
-
-Ease of Use
-
-Kyverno is more developer-friendly and easier to onboard for platform teams.
-
-Installation
-
-Kyverno is deployed directly inside the cluster.
-Azure Policy Add-on comes with native Azure integration.
-
-Mutation Support
-
-Kyverno supports resource mutation very effectively, while Azure Policy has limited mutation capabilities.
-
-Resource Generation
-
-Kyverno can automatically generate Kubernetes resources, which Azure Policy does not support.”
-
-Benefits Observed
-
-“From this spike, some key benefits observed were:
-
-Easier onboarding because policies are YAML-based
-Faster policy development and troubleshooting
-Better developer and platform engineering experience
-Strong native integration with Kubernetes workflows
-
-Overall, Kyverno provides more flexibility for Kubernetes-native governance and security enforcement.”
-
-Closing
-
-“As a next step, we can evaluate implementing Kyverno policies for security guardrails, governance standards, and compliance checks in AKS clusters alongside existing platform controls.”
+helm upgrade kyverno kyverno/kyverno \
+  -n kyverno \
+  -f values.yaml \
+  --set crds.install=true \
+  --set crds.groups.reports.clusterephemeralreports=true \
+  --set crds.groups.reports.ephemeralreports=true \
+  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
+  --set crds.groups.wgpolicyk8s.policyreports=true \
+  --set admissionController.createSelfSignedCert=true \
+  --set crds.migration.enabled=false \
+  --atomic \
+  --timeout 180s
