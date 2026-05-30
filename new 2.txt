@@ -1,8 +1,12 @@
-sum by(instance)(
-  container_memory_working_set_bytes{container!=""}
-)
-/
-on() group_left()
-sum(kube_node_status_allocatable{resource="memory"})
-* 100
+# Create a directory
+mkdir -p /tmp/kyverno-crds
+cd /tmp/kyverno-crds
 
+# Download the 4 missing CRDs directly from GitHub
+curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/reports.kyverno.io_ephemeralreports.yaml -o ephemeralreports.yaml
+
+curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/reports.kyverno.io_clusterephemeralreports.yaml -o clusterephemeralreports.yaml
+
+curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/wgpolicyk8s.io_policyreports.yaml -o policyreports.yaml
+
+curl -fsSL https://raw.githubusercontent.com/kyverno/kyverno/v1.18.0/config/crds/wgpolicyk8s.io_clusterpolicyreports.yaml -o clusterpolicyreports.yaml
