@@ -1,12 +1,23 @@
-helm upgrade kyverno kyverno/kyverno \
-  -n kyverno \
-  -f values.yaml \
-  --set crds.install=true \
-  --set crds.groups.reports.clusterephemeralreports=true \
-  --set crds.groups.reports.ephemeralreports=true \
-  --set crds.groups.wgpolicyk8s.clusterpolicyreports=true \
-  --set crds.groups.wgpolicyk8s.policyreports=true \
-  --set admissionController.createSelfSignedCert=true \
-  --set crds.migration.enabled=false \
-  --atomic \
-  --timeout 180s
+# Patch all mutating webhooks - loop through all webhooks in each config
+for webhook in $(kubectl get mutatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
+  echo "Patching $webhook"
+  count=$(kubectl get mutatingwebhookconfiguration $webhook \
+    -o jsonpath='{.webhooks}' | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+  for i in $(seq 0 $((count-1))); do
+    kubectl patch mutatingwebhookconfiguration $webhook \
+      --type=json \
+      -p="[{\"op\":\"replace\",\"path\":\"/webhooks/$i/failurePolicy\",\"value\":\"Ignore\"}]"
+  done
+done
+
+# Patch all validating webhooks
+for webhook in $(kubectl get validatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
+  echo "Patching $webhook"
+  count=$(kubectl get validatingwebhookconfiguration $webhook \
+    -o jsonpath='{.webhooks}' | python3 -c "import sys,json; print(len(json.load(sys.stdin)))")
+  for i in $(seq 0 $((count-1))); do
+    kubectl patch validatingwebhookconfiguration $webhook \
+      --type=json \
+      -p="[{\"op\":\"replace\",\"path\":\"/webhooks/$i/failurePolicy\",\"value\":\"Ignore\"}]"
+  done
+done
