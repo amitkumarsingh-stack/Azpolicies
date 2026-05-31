@@ -1,0 +1,390 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Azure Monitor Workspace (Prometheus)",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "description": "Kyverno vs Azure Policy - Resource Consumption Comparison",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "📊 Current Resource Usage Summary",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "red", "value": 1 }] },
+          "unit": "cores"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Kyverno Total CPU Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kyverno\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "Kyverno CPU",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.5 }, { "color": "red", "value": 1 }] },
+          "unit": "cores"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Azure Policy Total CPU Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-system\", container=~\".*policy.*\", container!=\"POD\"}[5m]))",
+          "legendFormat": "Azure Policy CPU",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 268435456 }, { "color": "red", "value": 536870912 }] },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Kyverno Total Memory Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"kyverno\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "Kyverno Memory",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 268435456 }, { "color": "red", "value": 536870912 }] },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "center", "reduceOptions": { "calcs": ["lastNotNull"] }, "textMode": "auto" },
+      "title": "Azure Policy Total Memory Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"kube-system\", container=~\".*policy.*\", container!=\"POD\"})",
+          "legendFormat": "Azure Policy Memory",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "🔥 CPU Usage Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "cores"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "options": { "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno vs Azure Policy - CPU Usage Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kyverno\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "Kyverno Total",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kube-system\", container=~\".*policy.*\", container!=\"POD\"}[5m]))",
+          "legendFormat": "Azure Policy Total",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "cores"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "options": { "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno CPU per Controller",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{namespace=\"kyverno\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "💾 Memory Usage Comparison",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 7,
+      "options": { "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno vs Azure Policy - Memory Usage Over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"kyverno\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "Kyverno Total",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"kube-system\", container=~\".*policy.*\", container!=\"POD\"})",
+          "legendFormat": "Azure Policy Total",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 8,
+      "options": { "legend": { "calcs": ["mean", "max", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno Memory per Controller",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum by (container) (container_memory_working_set_bytes{namespace=\"kyverno\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "{{container}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "id": 103,
+      "title": "📈 Resource Requests vs Actual Usage",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 5 },
+          "unit": "bytes"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 9,
+      "options": { "legend": { "calcs": ["mean", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno Memory - Requested vs Actual vs Limit",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(container_memory_working_set_bytes{namespace=\"kyverno\", container!=\"\", container!=\"POD\"})",
+          "legendFormat": "Actual Usage",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(kube_pod_container_resource_requests{namespace=\"kyverno\", resource=\"memory\", container!=\"\"})",
+          "legendFormat": "Requested",
+          "refId": "B"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(kube_pod_container_resource_limits{namespace=\"kyverno\", resource=\"memory\", container!=\"\"})",
+          "legendFormat": "Limit",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 5 },
+          "unit": "cores"
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 10,
+      "options": { "legend": { "calcs": ["mean", "last"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Kyverno CPU - Requested vs Actual",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"kyverno\", container!=\"\", container!=\"POD\"}[5m]))",
+          "legendFormat": "Actual Usage",
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sum(kube_pod_container_resource_requests{namespace=\"kyverno\", resource=\"cpu\", container!=\"\"})",
+          "legendFormat": "Requested",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 32 },
+      "id": 104,
+      "title": "🔍 Per Container Breakdown",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 0.1 }, { "color": "red", "value": 0.5 }] },
+          "unit": "cores",
+          "custom": { "align": "auto", "displayMode": "color-background", "filterable": true }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "id": 11,
+      "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "CPU Usage" }] },
+      "title": "CPU Usage per Container",
+      "transformations": [{ "id": "labelsToFields", "options": { "mode": "columns" } }],
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sort_desc(sum by (namespace, container) (rate(container_cpu_usage_seconds_total{namespace=~\"kyverno|kube-system\", container=~\"kyverno.*|.*policy.*\", container!=\"POD\"}[5m])))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 134217728 }, { "color": "red", "value": 268435456 }] },
+          "unit": "bytes",
+          "custom": { "align": "auto", "displayMode": "color-background", "filterable": true }
+        }
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "id": 12,
+      "options": { "footer": { "show": false }, "showHeader": true, "sortBy": [{ "desc": true, "displayName": "Memory Usage" }] },
+      "transformations": [{ "id": "labelsToFields", "options": { "mode": "columns" } }],
+      "title": "Memory Usage per Container",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+          "expr": "sort_desc(sum by (namespace, container) (container_memory_working_set_bytes{namespace=~\"kyverno|kube-system\", container=~\"kyverno.*|.*policy.*\", container!=\"POD\"}))",
+          "legendFormat": "",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "tags": ["kyverno", "azure-policy", "resources", "comparison"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "type": "datasource",
+        "label": "Datasource"
+      }
+    ]
+  },
+  "time": { "from": "now-3h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Kyverno vs Azure Policy - Resource Consumption",
+  "uid": "kyverno-resource-comparison",
+  "version": 1
+}
