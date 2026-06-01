@@ -128,3 +128,44 @@ spec:
             - ports:
               - port: "9443"
                 protocol: TCP
+----
+cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno-cilium-generate
+  labels:
+    app.kubernetes.io/instance: kyverno
+spec:
+  rules:
+  - apiGroups:
+    - cilium.io
+    resources:
+    - ciliumnetworkpolicies
+    verbs:
+    - get
+    - list
+    - watch
+    - create
+    - update
+    - patch
+    - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kyverno-cilium-generate
+  labels:
+    app.kubernetes.io/instance: kyverno
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kyverno-cilium-generate
+subjects:
+- kind: ServiceAccount
+  name: kyverno-admission-controller
+  namespace: kyverno
+- kind: ServiceAccount
+  name: kyverno-background-controller
+  namespace: kyverno
+EOF
