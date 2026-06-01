@@ -57,3 +57,27 @@ spec:
     validate:
       message: "Deploying resources in the default namespace is not allowed. Please use a dedicated namespace."
       deny: {}
+
+-----
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: add-workload-toleration
+spec:
+  rules:
+  - name: add-toleration
+    match:
+      any:
+      - resources:
+          kinds:
+          - Pod
+          namespaces:
+          - my-apps
+    mutate:
+      patchStrategicMerge:
+        spec:
+          tolerations:
+          - key: workload
+            operator: Equal
+            value: apps
+            effect: NoSchedule
