@@ -1,18 +1,40 @@
-apiVersion: kyverno.io/v1        # Kyverno API version
-kind: ClusterPolicy              # Cluster-wide policy (applies to all namespaces)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
 metadata:
-  name: block-default-namespace  # Unique name for this policy
-spec:
-  validationFailureAction: Enforce  # Enforce = block the request, Audit = just report
-  background: false                 # false = only check new requests, don't scan existing resources
-
-  rules:
-  - name: block-deployments-default-namespace  # Name of this specific rule
+  name: block-default-namespace
+  annotations:
+    # Human readable description of what this policy does
+    policies.kyverno.io/title: "Block Default Namespace"
     
-    match:                  # Define WHAT resources this rule applies to
-      any:                  # Match if ANY of the following conditions are true
+    # Category for grouping policies
+    policies.kyverno.io/category: "Best Practices"
+    
+    # Severity level: low, medium, high, critical
+    policies.kyverno.io/severity: "medium"
+    
+    # Which resources this policy targets
+    policies.kyverno.io/subject: "Pod, Deployment, StatefulSet"
+    
+    # Detailed description
+    policies.kyverno.io/description: >-
+      Deploying resources in the default namespace is discouraged 
+      as it makes it harder to manage access control, resource quotas,
+      and network policies. This policy blocks all resource creation 
+      in the default namespace and requires users to create dedicated 
+      namespaces for their workloads.
+
+    # Optional - link to more information
+    policies.kyverno.io/minversion: "1.6.0"
+    
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+  - name: block-deployments-default-namespace
+    match:
+      any:
       - resources:
-          kinds:            # List of resource types to match
+          kinds:
           - Pod
           - Deployment
           - StatefulSet
@@ -23,20 +45,15 @@ spec:
           - Service
           - ConfigMap
           - Secret
-          namespaces:       # Only match resources in these namespaces
-          - default         # Restrict to default namespace only
-
-    exclude:                # Define WHO is exempt from this rule
-      any:                  # Exclude if ANY of the following conditions match
+          namespaces:
+          - default
+    exclude:
+      any:
       - clusterRoles:
-        - cluster-admin     # Exempt users with cluster-admin role (platform/ops team)
+        - cluster-admin
       - subjects:
         - kind: ServiceAccount
-          name: system:serviceaccount:kube-system:*  # Exempt all kube-system service accounts
-                                                     # * is wildcard to match any SA in kube-system
-
-    validate:               # What validation to perform on matched resources
+          name: system:serviceaccount:kube-system:*
+    validate:
       message: "Deploying resources in the default namespace is not allowed. Please use a dedicated namespace."
-                            # Message shown to user when request is blocked
-      deny: {}              # deny: {} means deny ALL matched requests with no conditions
-                            # Empty {} means unconditional deny for everything that matched above
+      deny: {}
