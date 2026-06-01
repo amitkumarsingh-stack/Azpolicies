@@ -1,83 +1,130 @@
 apiVersion: kyverno.io/v1
 kind: ClusterPolicy
 metadata:
-  name: block-default-namespace
+  name: generate-namespace-defaults
   annotations:
-    # Human readable description of what this policy does
-    policies.kyverno.io/title: "Block Default Namespace"
-    
-    # Category for grouping policies
-    policies.kyverno.io/category: "Best Practices"
-    
-    # Severity level: low, medium, high, critical
+    policies.kyverno.io/title: "Generate Namespace Defaults"
+    policies.kyverno.io/category: "Multi-Tenancy"
     policies.kyverno.io/severity: "medium"
-    
-    # Which resources this policy targets
-    policies.kyverno.io/subject: "Pod, Deployment, StatefulSet"
-    
-    # Detailed description
+    policies.kyverno.io/subject: "Namespace"
     policies.kyverno.io/description: >-
-      Deploying resources in the default namespace is discouraged 
-      as it makes it harder to manage access control, resource quotas,
-      and network policies. This policy blocks all resource creation 
-      in the default namespace and requires users to create dedicated 
-      namespaces for their workloads.
-
-    # Optional - link to more information
+      Automatically generates a ResourceQuota and a default
+      CiliumNetworkPolicy for every new namespace created.
+      This ensures all namespaces have resource limits and
+      a baseline network policy enforced from creation.
     policies.kyverno.io/minversion: "1.6.0"
-    
 spec:
-  validationFailureAction: Enforce
-  background: false
   rules:
-  - name: block-deployments-default-namespace
-    match:
-      any:
-      - resources:
-          kinds:
-          - Pod
-          - Deployment
-          - StatefulSet
-          - DaemonSet
-          - Job
-          - CronJob
-          - ReplicaSet
-          - Service
-          - ConfigMap
-          - Secret
-          namespaces:
-          - default
-    exclude:
-      any:
-      - clusterRoles:
-        - cluster-admin
-      - subjects:
-        - kind: ServiceAccount
-          name: system:serviceaccount:kube-system:*
-    validate:
-      message: "Deploying resources in the default namespace is not allowed. Please use a dedicated namespace."
-      deny: {}
 
------
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  name: add-workload-toleration
-spec:
-  rules:
-  - name: add-toleration
+  # Rule 1 - Generate ResourceQuota
+  - name: generate-resource-quota
     match:
-      any:
-      - resources:
-          kinds:
-          - Pod
-          namespaces:
-          - my-apps
-    mutate:
-      patchStrategicMerge:
+      resources:
+        kinds:
+        - Namespace
+    generate:
+      apiVersion: v1
+      kind: ResourceQuota
+      name: default-resource-quota
+      # Generate in the newly created namespace
+      namespace: "{{request.object.metadata.name}}"
+      # synchronize: true means if policy changes, quota is updated too
+      # synchronize: false means quota is only created once and can be modified manually
+      synchronize: true
+      data:
+        metadata:
+          name: default-resource-quota
+          labels:
+            managed-by: kyverno
+            policy: generate-namespace-defaults
         spec:
-          tolerations:
-          - key: workload
-            operator: Equal
-            value: apps
-            effect: NoSchedule
+          hard:
+            # Maximum number of pods in namespace
+            pods: "20"
+            # Maximum number of services
+            services: "10"
+            # Maximum number of secrets
+            secrets: "20"
+            # Maximum number of configmaps
+            configmaps: "20"
+            # CPU requests total across all pods
+            requests.cpu: "4"
+            # Memory requests total across all pods
+            requests.memory: "4Gi"
+            # CPU limits total across all pods
+            limits.cpu: "8"
+            # Memory limits total across all pods
+            limits.memory: "8Gi"
+            # Maximum number of persistent volume claims
+            persistentvolumeclaims: "5"
+
+  # Rule 2 - Generate CiliumNetworkPolicy
+  - name: generate-cilium-default-policy
+    match:
+      resources:
+        kinds:
+        - Namespace
+        # Exclude system namespaces from getting this policy
+        selector:
+          matchExpressions:
+          - key: kubernetes.io/metadata.name
+            operator: NotIn
+            values:
+            - kube-system
+            - kube-public
+            - kube-node-lease
+            - kyverno
+            - monitoring
+            - cert-manager
+    generate:
+      apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      name: default-namespace-policy
+      namespace: "{{request.object.metadata.name}}"
+      synchronize: true
+      data:
+        metadata:
+          name: default-namespace-policy
+          labels:
+            managed-by: kyverno
+            policy: generate-namespace-defaults
+        spec:
+          # Apply to all pods in the namespace
+          endpointSelector: {}
+          # Egress rules - what pods can connect TO
+          egress:
+          - toEntities:
+            # Allow DNS resolution
+            - cluster
+            toPorts:
+            - ports:
+              - port: "53"
+                protocol: UDP
+              - port: "53"
+                protocol: TCP
+          - toEntities:
+            # Allow calls to kube-apiserver
+            - kube-apiserver
+            toPorts:
+            - ports:
+              - port: "443"
+                protocol: TCP
+          - toEntities:
+            # Allow internet egress on 443
+            - world
+            toPorts:
+            - ports:
+              - port: "443"
+                protocol: TCP
+          # Ingress rules - what can connect TO pods
+          ingress:
+          - fromEntities:
+            # Allow traffic from within the same namespace
+            - namespace
+          - fromEntities:
+            # Allow traffic from kube-apiserver (for webhooks)
+            - kube-apiserver
+            toPorts:
+            - ports:
+              - port: "9443"
+                protocol: TCP
