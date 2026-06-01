@@ -1,38 +1,42 @@
-apiVersion: cilium.io/v2
-kind: CiliumNetworkPolicy
+apiVersion: kyverno.io/v1        # Kyverno API version
+kind: ClusterPolicy              # Cluster-wide policy (applies to all namespaces)
 metadata:
-  name: kyverno-allow-egress-to-backends
-  namespace: kyverno
+  name: block-default-namespace  # Unique name for this policy
 spec:
-  endpointSelector:
-    matchLabels:
-      app.kubernetes.io/instance: kyverno
-  egress:
-  - toEntities:
-    - kube-apiserver
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  - toEntities:
-    - world
-    toPorts:
-    - ports:
-      - port: "443"
-        protocol: TCP
-  ingress:
-  - fromEntities:
-    - kube-apiserver
-    toPorts:
-    - ports:
-      - port: "9443"
-        protocol: TCP
-  - fromEndpoints:
-    - matchLabels:
-        k8s:io.kubernetes.pod.namespace: kube-system
-    toPorts:
-    - ports:
-      - port: "8000"
-        protocol: TCP
-      - port: "9443"
-        protocol: TCP
+  validationFailureAction: Enforce  # Enforce = block the request, Audit = just report
+  background: false                 # false = only check new requests, don't scan existing resources
+
+  rules:
+  - name: block-deployments-default-namespace  # Name of this specific rule
+    
+    match:                  # Define WHAT resources this rule applies to
+      any:                  # Match if ANY of the following conditions are true
+      - resources:
+          kinds:            # List of resource types to match
+          - Pod
+          - Deployment
+          - StatefulSet
+          - DaemonSet
+          - Job
+          - CronJob
+          - ReplicaSet
+          - Service
+          - ConfigMap
+          - Secret
+          namespaces:       # Only match resources in these namespaces
+          - default         # Restrict to default namespace only
+
+    exclude:                # Define WHO is exempt from this rule
+      any:                  # Exclude if ANY of the following conditions match
+      - clusterRoles:
+        - cluster-admin     # Exempt users with cluster-admin role (platform/ops team)
+      - subjects:
+        - kind: ServiceAccount
+          name: system:serviceaccount:kube-system:*  # Exempt all kube-system service accounts
+                                                     # * is wildcard to match any SA in kube-system
+
+    validate:               # What validation to perform on matched resources
+      message: "Deploying resources in the default namespace is not allowed. Please use a dedicated namespace."
+                            # Message shown to user when request is blocked
+      deny: {}              # deny: {} means deny ALL matched requests with no conditions
+                            # Empty {} means unconditional deny for everything that matched above
