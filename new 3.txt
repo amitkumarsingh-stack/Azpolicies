@@ -1,15 +1,86 @@
-# Patch all mutating webhooks directly without counting
-for webhook in $(kubectl get mutatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
-  echo "Patching $webhook"
-  kubectl get mutatingwebhookconfiguration $webhook -o json | \
-    sed 's/"failurePolicy":"Fail"/"failurePolicy":"Ignore"/g' | \
-    kubectl replace -f -
-done
+1. Architecture Overview
 
-# Patch all validating webhooks
-for webhook in $(kubectl get validatingwebhookconfigurations | grep kyverno | awk '{print $1}'); do
-  echo "Patching $webhook"
-  kubectl get validatingwebhookconfiguration $webhook -o json | \
-    sed 's/"failurePolicy":"Fail"/"failurePolicy":"Ignore"/g' | \
-    kubectl replace -f -
-done
+"On the left side, we can see the cluster-wide resources that Kyverno creates during installation, such as:
+
+ClusterRoles
+ClusterRoleBindings
+Custom Resource Definitions (CRDs)
+Validating Webhook Configurations
+Mutating Webhook Configurations
+
+These components allow Kyverno to integrate deeply with the Kubernetes API server and intercept resource creation or modification requests."
+
+2. Kyverno Namespace Components
+
+"Within the Kyverno namespace, multiple controllers run as separate deployments and pods. This separation provides scalability and fault tolerance.
+
+The key controllers are:
+
+Admission Controller
+Reports Controller
+Background Controller
+Cleanup Controller"
+3. Admission Controller (Most Important)
+
+"The Admission Controller is the first line of policy enforcement.
+
+Its responsibilities include:
+
+Intercepting Kubernetes API requests through admission webhooks.
+Validating resources against policies.
+Mutating resources by automatically adding labels, annotations, or security settings.
+Performing image verification and image validation.
+Enforcing policy exceptions when configured.
+
+For example, if a developer creates a Pod without resource limits, the Admission Controller can either reject it or automatically inject the required configuration."
+
+4. Reports Controller
+
+"The Reports Controller is responsible for compliance reporting.
+
+Its functions include:
+
+Generating PolicyReports and ClusterPolicyReports.
+Continuously scanning cluster resources.
+Identifying policy violations.
+Providing visibility into compliance status without blocking workloads.
+
+This helps platform teams monitor policy adherence across the cluster."
+
+5. Background Controller
+
+"The Background Controller handles policies for existing resources.
+
+While the Admission Controller works only during resource creation or updates, the Background Controller:
+
+Scans already deployed resources.
+Executes generate policies.
+Applies mutate-existing policies.
+Reacts whenever policies are added or updated.
+
+For example, if a new security policy is introduced, the Background Controller ensures previously deployed workloads are evaluated against that policy."
+
+6. Cleanup Controller
+
+"The Cleanup Controller is responsible for automated resource cleanup.
+
+Its capabilities include:
+
+Removing obsolete or expired resources.
+Executing scheduled cleanup tasks.
+Using Kubernetes CronJobs to trigger cleanup operations.
+
+Examples include deleting completed jobs, temporary namespaces, or old resources that are no longer needed."
+
+7. High Availability Configuration
+
+"For production environments, Kyverno supports high availability by running multiple replicas of each controller.
+
+Typical production sizing includes:
+
+Admission Controller = 3 replicas
+Background Controller = 2 replicas
+Cleanup Controller = 2 replicas
+Reports Controller = 2 replicas
+
+This ensures policy enforcement continues even if individual pods fail."
