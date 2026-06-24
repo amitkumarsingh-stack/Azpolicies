@@ -1,193 +1,325 @@
-apiVersion: kyverno.io/v1
-kind: ClusterPolicy
-metadata:
-  name: generate-namespace-defaults
-  annotations:
-    policies.kyverno.io/title: "Generate Namespace Defaults"
-    policies.kyverno.io/category: "Multi-Tenancy"
-    policies.kyverno.io/severity: "medium"
-    policies.kyverno.io/subject: "Namespace"
-    policies.kyverno.io/description: >-
-      Automatically generates a ResourceQuota and a default
-      CiliumNetworkPolicy for every new namespace created.
-      This ensures all namespaces have resource limits and
-      a baseline network policy enforced from creation.
-    policies.kyverno.io/minversion: "1.6.0"
-spec:
-  rules:
+# =============================================================================
+# ingress2gateway Annotation Migration Test Pipeline
+# =============================================================================
+# Runs ingress2gateway against ingress-annotation-test.yaml for three emitters:
+#   - standard (NGINX Gateway Fabric)
+#   - envoy-gateway
+#   - kgateway
+#
+# Publishes converted manifests and a comparison report as pipeline artifacts.
+#
+# Trigger: any change to the ingress test manifest or this pipeline file
+# =============================================================================
 
-  # Rule 1 - Generate ResourceQuota
-  - name: generate-resource-quota
-    match:
-      resources:
-        kinds:
-        - Namespace
-    generate:
-      apiVersion: v1
-      kind: ResourceQuota
-      name: default-resource-quota
-      # Generate in the newly created namespace
-      namespace: "{{request.object.metadata.name}}"
-      # synchronize: true means if policy changes, quota is updated too
-      # synchronize: false means quota is only created once and can be modified manually
-      synchronize: true
-      data:
-        metadata:
-          name: default-resource-quota
-          labels:
-            managed-by: kyverno
-            policy: generate-namespace-defaults
-        spec:
-          hard:
-            # Maximum number of pods in namespace
-            pods: "20"
-            # Maximum number of services
-            services: "10"
-            # Maximum number of secrets
-            secrets: "20"
-            # Maximum number of configmaps
-            configmaps: "20"
-            # CPU requests total across all pods
-            requests.cpu: "4"
-            # Memory requests total across all pods
-            requests.memory: "4Gi"
-            # CPU limits total across all pods
-            limits.cpu: "8"
-            # Memory limits total across all pods
-            limits.memory: "8Gi"
-            # Maximum number of persistent volume claims
-            persistentvolumeclaims: "5"
+trigger:
+  branches:
+    include:
+      - main
+      - feature/*
+  paths:
+    include:
+      - manifests/ingress-annotation-test.yaml
+      - pipelines/ingress-migration-test.yaml
 
-  # Rule 2 - Generate CiliumNetworkPolicy
-  - name: generate-cilium-default-policy
-    match:
-      resources:
-        kinds:
-        - Namespace
-        # Exclude system namespaces from getting this policy
-        selector:
-          matchExpressions:
-          - key: kubernetes.io/metadata.name
-            operator: NotIn
-            values:
-            - kube-system
-            - kube-public
-            - kube-node-lease
-            - kyverno
-            - monitoring
-            - cert-manager
-    generate:
-      apiVersion: cilium.io/v2
-      kind: CiliumNetworkPolicy
-      name: default-namespace-policy
-      namespace: "{{request.object.metadata.name}}"
-      synchronize: true
-      data:
-        metadata:
-          name: default-namespace-policy
-          labels:
-            managed-by: kyverno
-            policy: generate-namespace-defaults
-        spec:
-          # Apply to all pods in the namespace
-          endpointSelector: {}
-          # Egress rules - what pods can connect TO
-          egress:
-          - toEntities:
-            # Allow DNS resolution
-            - cluster
-            toPorts:
-            - ports:
-              - port: "53"
-                protocol: UDP
-              - port: "53"
-                protocol: TCP
-          - toEntities:
-            # Allow calls to kube-apiserver
-            - kube-apiserver
-            toPorts:
-            - ports:
-              - port: "443"
-                protocol: TCP
-          - toEntities:
-            # Allow internet egress on 443
-            - world
-            toPorts:
-            - ports:
-              - port: "443"
-                protocol: TCP
-          # Ingress rules - what can connect TO pods
-          ingress:
-          - fromEntities:
-            # Allow traffic from within the same namespace
-            - namespace
-          - fromEntities:
-            # Allow traffic from kube-apiserver (for webhooks)
-            - kube-apiserver
-            toPorts:
-            - ports:
-              - port: "9443"
-                protocol: TCP
-----
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kyverno-cilium-generate
-  labels:
-    app.kubernetes.io/instance: kyverno
-spec:
-  rules:
-  - apiGroups:
-    - cilium.io
-    resources:
-    - ciliumnetworkpolicies
-    verbs:
-    - get
-    - list
-    - watch
-    - create
-    - update
-    - patch
-    - delete
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kyverno-cilium-generate
-  labels:
-    app.kubernetes.io/instance: kyverno
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kyverno-cilium-generate
-subjects:
-- kind: ServiceAccount
-  name: kyverno-admission-controller
-  namespace: kyverno
-- kind: ServiceAccount
-  name: kyverno-background-controller
-  namespace: kyverno
-EOF
-----
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: kyverno-cilium-generate
-  labels:
-    app.kubernetes.io/instance: kyverno
-rules:
-- apiGroups:
-  - cilium.io
-  resources:
-  - ciliumnetworkpolicies
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - update
-  - patch
-  - delete
-EOF
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - manifests/ingress-annotation-test.yaml
+
+variables:
+  GO_VERSION: '1.22'
+  I2G_MODULE: 'github.com/kubernetes-sigs/ingress2gateway'
+  I2G_VERSION: 'latest'
+  INPUT_FILE: 'manifests/ingress-annotation-test.yaml'
+  OUTPUT_DIR: '$(Build.ArtifactStagingDirectory)/gateway-outputs'
+  REPORT_DIR: '$(Build.ArtifactStagingDirectory)/reports'
+
+stages:
+
+# =============================================================================
+# STAGE 1 — Install & Convert
+# =============================================================================
+- stage: Convert
+  displayName: 'Convert Ingress → Gateway API'
+  jobs:
+
+  - job: InstallAndConvert
+    displayName: 'ingress2gateway conversion'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+
+    # --- Setup Go ---
+    - task: GoTool@0
+      displayName: 'Install Go $(GO_VERSION)'
+      inputs:
+        version: '$(GO_VERSION)'
+
+    # --- Install ingress2gateway ---
+    - script: |
+        echo "##[section]Installing ingress2gateway..."
+        go install $(I2G_MODULE)@$(I2G_VERSION)
+        echo "##[section]Verifying installation..."
+        $(go env GOPATH)/bin/ingress2gateway version
+        echo "##vso[task.setvariable variable=I2G_BIN]$(go env GOPATH)/bin/ingress2gateway"
+      displayName: 'Install ingress2gateway'
+
+    # --- Create output directories ---
+    - script: |
+        mkdir -p $(OUTPUT_DIR)
+        mkdir -p $(REPORT_DIR)
+      displayName: 'Create output directories'
+
+    # --- Verify input file exists ---
+    - script: |
+        echo "##[section]Input file check..."
+        if [ ! -f "$(INPUT_FILE)" ]; then
+          echo "##[error]Input file not found: $(INPUT_FILE)"
+          exit 1
+        fi
+        INGRESS_COUNT=$(grep -c "kind: Ingress" $(INPUT_FILE))
+        echo "Found ${INGRESS_COUNT} Ingress resources in $(INPUT_FILE)"
+        echo "##vso[task.setvariable variable=INGRESS_COUNT]${INGRESS_COUNT}"
+      displayName: 'Verify input manifest'
+
+    # --- Run: standard emitter (NGF) ---
+    - script: |
+        echo "##[section]Running conversion: standard (NGINX Gateway Fabric)..."
+        I2G=$(go env GOPATH)/bin/ingress2gateway
+
+        $I2G print \
+          --providers=ingress-nginx \
+          --emitter=standard \
+          --input-file=$(INPUT_FILE) \
+          --allow-experimental-gw-api \
+          > $(OUTPUT_DIR)/gateway-output-ngf.yaml \
+          2> $(OUTPUT_DIR)/warnings-ngf.txt \
+          || true
+
+        echo "--- NGF output ---"
+        echo "Resources generated:"
+        grep "^kind:" $(OUTPUT_DIR)/gateway-output-ngf.yaml | sort | uniq -c || echo "(none)"
+        echo ""
+        echo "--- Warnings ---"
+        cat $(OUTPUT_DIR)/warnings-ngf.txt || echo "(none)"
+      displayName: 'Convert → NGF (standard)'
+
+    # --- Run: envoy-gateway emitter ---
+    - script: |
+        echo "##[section]Running conversion: envoy-gateway..."
+        I2G=$(go env GOPATH)/bin/ingress2gateway
+
+        $I2G print \
+          --providers=ingress-nginx \
+          --emitter=envoy-gateway \
+          --input-file=$(INPUT_FILE) \
+          --allow-experimental-gw-api \
+          > $(OUTPUT_DIR)/gateway-output-envoy.yaml \
+          2> $(OUTPUT_DIR)/warnings-envoy.txt \
+          || true
+
+        echo "--- Envoy Gateway output ---"
+        echo "Resources generated:"
+        grep "^kind:" $(OUTPUT_DIR)/gateway-output-envoy.yaml | sort | uniq -c || echo "(none)"
+        echo ""
+        echo "--- Warnings ---"
+        cat $(OUTPUT_DIR)/warnings-envoy.txt || echo "(none)"
+      displayName: 'Convert → Envoy Gateway'
+
+    # --- Run: kgateway emitter ---
+    - script: |
+        echo "##[section]Running conversion: kgateway..."
+        I2G=$(go env GOPATH)/bin/ingress2gateway
+
+        $I2G print \
+          --providers=ingress-nginx \
+          --emitter=kgateway \
+          --input-file=$(INPUT_FILE) \
+          --allow-experimental-gw-api \
+          > $(OUTPUT_DIR)/gateway-output-kgateway.yaml \
+          2> $(OUTPUT_DIR)/warnings-kgateway.txt \
+          || true
+
+        echo "--- kgateway output ---"
+        echo "Resources generated:"
+        grep "^kind:" $(OUTPUT_DIR)/gateway-output-kgateway.yaml | sort | uniq -c || echo "(none)"
+        echo ""
+        echo "--- Warnings ---"
+        cat $(OUTPUT_DIR)/warnings-kgateway.txt || echo "(none)"
+      displayName: 'Convert → kgateway'
+
+    # --- Run: traefik provider (bonus comparison) ---
+    - script: |
+        echo "##[section]Running conversion: traefik provider..."
+        I2G=$(go env GOPATH)/bin/ingress2gateway
+
+        $I2G print \
+          --providers=traefik \
+          --emitter=standard \
+          --input-file=$(INPUT_FILE) \
+          --allow-experimental-gw-api \
+          > $(OUTPUT_DIR)/gateway-output-traefik.yaml \
+          2> $(OUTPUT_DIR)/warnings-traefik.txt \
+          || true
+
+        echo "--- Traefik output ---"
+        grep "^kind:" $(OUTPUT_DIR)/gateway-output-traefik.yaml | sort | uniq -c || echo "(none)"
+      displayName: 'Convert → Traefik (bonus)'
+
+    # --- Generate comparison report ---
+    - script: |
+        REPORT=$(REPORT_DIR)/annotation-migration-report.md
+        echo "# ingress-nginx Annotation Migration Report" > $REPORT
+        echo "" >> $REPORT
+        echo "**Pipeline:** $(Build.BuildNumber)" >> $REPORT
+        echo "**Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $REPORT
+        echo "**Input:** $(INPUT_FILE)" >> $REPORT
+        echo "**Ingress resources tested:** $(INGRESS_COUNT)" >> $REPORT
+        echo "" >> $REPORT
+
+        echo "## Resource Count by Emitter" >> $REPORT
+        echo "" >> $REPORT
+        echo "| Emitter | HTTPRoutes | Gateways | Other |" >> $REPORT
+        echo "|---------|------------|----------|-------|" >> $REPORT
+
+        for EMITTER in ngf envoy kgateway traefik; do
+          FILE=$(OUTPUT_DIR)/gateway-output-${EMITTER}.yaml
+          if [ -f "$FILE" ] && [ -s "$FILE" ]; then
+            HTTPROUTES=$(grep -c "kind: HTTPRoute" $FILE || echo 0)
+            GATEWAYS=$(grep -c "kind: Gateway$" $FILE || echo 0)
+            OTHER=$(grep "^kind:" $FILE | grep -v "HTTPRoute\|^kind: Gateway$" | wc -l || echo 0)
+            echo "| ${EMITTER} | ${HTTPROUTES} | ${GATEWAYS} | ${OTHER} |" >> $REPORT
+          else
+            echo "| ${EMITTER} | - | - | no output |" >> $REPORT
+          fi
+        done
+
+        echo "" >> $REPORT
+        echo "## Warnings per Emitter" >> $REPORT
+        echo "" >> $REPORT
+
+        for EMITTER in ngf envoy kgateway traefik; do
+          WARN_FILE=$(OUTPUT_DIR)/warnings-${EMITTER}.txt
+          echo "### ${EMITTER}" >> $REPORT
+          echo "" >> $REPORT
+          if [ -f "$WARN_FILE" ] && [ -s "$WARN_FILE" ]; then
+            echo '```' >> $REPORT
+            cat $WARN_FILE >> $REPORT
+            echo '```' >> $REPORT
+          else
+            echo "_No warnings_" >> $REPORT
+          fi
+          echo "" >> $REPORT
+        done
+
+        echo "## Diff: NGF vs Envoy Gateway" >> $REPORT
+        echo "" >> $REPORT
+        echo '```diff' >> $REPORT
+        diff \
+          <(grep "^kind:\|^  name:\|type:" $(OUTPUT_DIR)/gateway-output-ngf.yaml 2>/dev/null || echo "") \
+          <(grep "^kind:\|^  name:\|type:" $(OUTPUT_DIR)/gateway-output-envoy.yaml 2>/dev/null || echo "") \
+          >> $REPORT || true
+        echo '```' >> $REPORT
+
+        echo "" >> $REPORT
+        echo "---" >> $REPORT
+        echo "_Generated by ingress-migration-test pipeline_" >> $REPORT
+
+        echo "##[section]Report generated:"
+        cat $REPORT
+      displayName: 'Generate comparison report'
+
+    # --- Publish all outputs as artifact ---
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish gateway manifests'
+      inputs:
+        targetPath: '$(OUTPUT_DIR)'
+        artifact: 'gateway-outputs'
+        publishLocation: 'pipeline'
+
+    # --- Publish report as artifact ---
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish migration report'
+      inputs:
+        targetPath: '$(REPORT_DIR)'
+        artifact: 'migration-report'
+        publishLocation: 'pipeline'
+
+    # --- Fail the job if ALL emitters produced empty output ---
+    - script: |
+        EMPTY=0
+        for EMITTER in ngf envoy kgateway; do
+          FILE=$(OUTPUT_DIR)/gateway-output-${EMITTER}.yaml
+          if [ ! -s "$FILE" ]; then
+            echo "##[warning]Empty output for emitter: ${EMITTER}"
+            EMPTY=$((EMPTY + 1))
+          fi
+        done
+        if [ "$EMPTY" -eq 3 ]; then
+          echo "##[error]All emitters produced empty output — check input file."
+          exit 1
+        fi
+      displayName: 'Validate outputs are non-empty'
+
+# =============================================================================
+# STAGE 2 — Lint converted manifests
+# =============================================================================
+- stage: Lint
+  displayName: 'Lint Gateway API manifests'
+  dependsOn: Convert
+  condition: succeeded()
+  jobs:
+
+  - job: LintManifests
+    displayName: 'kubeconform validation'
+    pool:
+      vmImage: 'ubuntu-latest'
+
+    steps:
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download gateway outputs'
+      inputs:
+        artifactName: 'gateway-outputs'
+        targetPath: '$(Pipeline.Workspace)/gateway-outputs'
+
+    - script: |
+        # Install kubeconform
+        VERSION="v0.6.7"
+        curl -sL "https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz" \
+          | tar -xz -C /usr/local/bin kubeconform
+        kubeconform -v
+      displayName: 'Install kubeconform'
+
+    - script: |
+        SCHEMA_URL="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master"
+        GW_SCHEMA="https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io"
+
+        EXIT_CODE=0
+        for FILE in $(Pipeline.Workspace)/gateway-outputs/gateway-output-*.yaml; do
+          EMITTER=$(basename $FILE .yaml | sed 's/gateway-output-//')
+          echo "##[section]Linting: ${EMITTER}"
+
+          if [ ! -s "$FILE" ]; then
+            echo "##[warning]Skipping empty file: $FILE"
+            continue
+          fi
+
+          kubeconform \
+            -schema-location default \
+            -schema-location "${GW_SCHEMA}/httproute_v1.json" \
+            -schema-location "${GW_SCHEMA}/gateway_v1.json" \
+            -ignore-missing-schemas \
+            -summary \
+            "$FILE" || EXIT_CODE=$?
+
+          echo ""
+        done
+
+        exit $EXIT_CODE
+      displayName: 'Validate manifests with kubeconform'
+      continueOnError: true
