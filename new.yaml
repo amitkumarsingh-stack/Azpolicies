@@ -1,325 +1,479 @@
 # =============================================================================
-# ingress2gateway Annotation Migration Test Pipeline
+# ingress-nginx Annotation Test Suite for NGINX Gateway Fabric Migration
 # =============================================================================
-# Runs ingress2gateway against ingress-annotation-test.yaml for three emitters:
-#   - standard (NGINX Gateway Fabric)
-#   - envoy-gateway
-#   - kgateway
+# Usage:
+#   kubectl apply -f ingress-annotation-test.yaml
+#   Then run validate.sh to check which annotations worked
 #
-# Publishes converted manifests and a comparison report as pipeline artifacts.
-#
-# Trigger: any change to the ingress test manifest or this pipeline file
+# Namespace: bookinfo (matches your current test setup)
+# Each Ingress below isolates a specific annotation category.
 # =============================================================================
 
-trigger:
-  branches:
-    include:
-      - main
-      - feature/*
-  paths:
-    include:
-      - manifests/ingress-annotation-test.yaml
-      - pipelines/ingress-migration-test.yaml
-
-pr:
-  branches:
-    include:
-      - main
-  paths:
-    include:
-      - manifests/ingress-annotation-test.yaml
-
-variables:
-  GO_VERSION: '1.22'
-  I2G_MODULE: 'github.com/kubernetes-sigs/ingress2gateway'
-  I2G_VERSION: 'latest'
-  INPUT_FILE: 'manifests/ingress-annotation-test.yaml'
-  OUTPUT_DIR: '$(Build.ArtifactStagingDirectory)/gateway-outputs'
-  REPORT_DIR: '$(Build.ArtifactStagingDirectory)/reports'
-
-stages:
-
+---
 # =============================================================================
-# STAGE 1 — Install & Convert
+# 1. BASELINE — no annotations (sanity check, must work)
 # =============================================================================
-- stage: Convert
-  displayName: 'Convert Ingress → Gateway API'
-  jobs:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-01-baseline
+  namespace: bookinfo
+  labels:
+    test-category: baseline
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-01-baseline
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-  - job: InstallAndConvert
-    displayName: 'ingress2gateway conversion'
-    pool:
-      vmImage: 'ubuntu-latest'
-
-    steps:
-
-    # --- Setup Go ---
-    - task: GoTool@0
-      displayName: 'Install Go $(GO_VERSION)'
-      inputs:
-        version: '$(GO_VERSION)'
-
-    # --- Install ingress2gateway ---
-    - script: |
-        echo "##[section]Installing ingress2gateway..."
-        go install $(I2G_MODULE)@$(I2G_VERSION)
-        echo "##[section]Verifying installation..."
-        $(go env GOPATH)/bin/ingress2gateway version
-        echo "##vso[task.setvariable variable=I2G_BIN]$(go env GOPATH)/bin/ingress2gateway"
-      displayName: 'Install ingress2gateway'
-
-    # --- Create output directories ---
-    - script: |
-        mkdir -p $(OUTPUT_DIR)
-        mkdir -p $(REPORT_DIR)
-      displayName: 'Create output directories'
-
-    # --- Verify input file exists ---
-    - script: |
-        echo "##[section]Input file check..."
-        if [ ! -f "$(INPUT_FILE)" ]; then
-          echo "##[error]Input file not found: $(INPUT_FILE)"
-          exit 1
-        fi
-        INGRESS_COUNT=$(grep -c "kind: Ingress" $(INPUT_FILE))
-        echo "Found ${INGRESS_COUNT} Ingress resources in $(INPUT_FILE)"
-        echo "##vso[task.setvariable variable=INGRESS_COUNT]${INGRESS_COUNT}"
-      displayName: 'Verify input manifest'
-
-    # --- Run: standard emitter (NGF) ---
-    - script: |
-        echo "##[section]Running conversion: standard (NGINX Gateway Fabric)..."
-        I2G=$(go env GOPATH)/bin/ingress2gateway
-
-        $I2G print \
-          --providers=ingress-nginx \
-          --emitter=standard \
-          --input-file=$(INPUT_FILE) \
-          --allow-experimental-gw-api \
-          > $(OUTPUT_DIR)/gateway-output-ngf.yaml \
-          2> $(OUTPUT_DIR)/warnings-ngf.txt \
-          || true
-
-        echo "--- NGF output ---"
-        echo "Resources generated:"
-        grep "^kind:" $(OUTPUT_DIR)/gateway-output-ngf.yaml | sort | uniq -c || echo "(none)"
-        echo ""
-        echo "--- Warnings ---"
-        cat $(OUTPUT_DIR)/warnings-ngf.txt || echo "(none)"
-      displayName: 'Convert → NGF (standard)'
-
-    # --- Run: envoy-gateway emitter ---
-    - script: |
-        echo "##[section]Running conversion: envoy-gateway..."
-        I2G=$(go env GOPATH)/bin/ingress2gateway
-
-        $I2G print \
-          --providers=ingress-nginx \
-          --emitter=envoy-gateway \
-          --input-file=$(INPUT_FILE) \
-          --allow-experimental-gw-api \
-          > $(OUTPUT_DIR)/gateway-output-envoy.yaml \
-          2> $(OUTPUT_DIR)/warnings-envoy.txt \
-          || true
-
-        echo "--- Envoy Gateway output ---"
-        echo "Resources generated:"
-        grep "^kind:" $(OUTPUT_DIR)/gateway-output-envoy.yaml | sort | uniq -c || echo "(none)"
-        echo ""
-        echo "--- Warnings ---"
-        cat $(OUTPUT_DIR)/warnings-envoy.txt || echo "(none)"
-      displayName: 'Convert → Envoy Gateway'
-
-    # --- Run: kgateway emitter ---
-    - script: |
-        echo "##[section]Running conversion: kgateway..."
-        I2G=$(go env GOPATH)/bin/ingress2gateway
-
-        $I2G print \
-          --providers=ingress-nginx \
-          --emitter=kgateway \
-          --input-file=$(INPUT_FILE) \
-          --allow-experimental-gw-api \
-          > $(OUTPUT_DIR)/gateway-output-kgateway.yaml \
-          2> $(OUTPUT_DIR)/warnings-kgateway.txt \
-          || true
-
-        echo "--- kgateway output ---"
-        echo "Resources generated:"
-        grep "^kind:" $(OUTPUT_DIR)/gateway-output-kgateway.yaml | sort | uniq -c || echo "(none)"
-        echo ""
-        echo "--- Warnings ---"
-        cat $(OUTPUT_DIR)/warnings-kgateway.txt || echo "(none)"
-      displayName: 'Convert → kgateway'
-
-    # --- Run: traefik provider (bonus comparison) ---
-    - script: |
-        echo "##[section]Running conversion: traefik provider..."
-        I2G=$(go env GOPATH)/bin/ingress2gateway
-
-        $I2G print \
-          --providers=traefik \
-          --emitter=standard \
-          --input-file=$(INPUT_FILE) \
-          --allow-experimental-gw-api \
-          > $(OUTPUT_DIR)/gateway-output-traefik.yaml \
-          2> $(OUTPUT_DIR)/warnings-traefik.txt \
-          || true
-
-        echo "--- Traefik output ---"
-        grep "^kind:" $(OUTPUT_DIR)/gateway-output-traefik.yaml | sort | uniq -c || echo "(none)"
-      displayName: 'Convert → Traefik (bonus)'
-
-    # --- Generate comparison report ---
-    - script: |
-        REPORT=$(REPORT_DIR)/annotation-migration-report.md
-        echo "# ingress-nginx Annotation Migration Report" > $REPORT
-        echo "" >> $REPORT
-        echo "**Pipeline:** $(Build.BuildNumber)" >> $REPORT
-        echo "**Date:** $(date -u '+%Y-%m-%d %H:%M UTC')" >> $REPORT
-        echo "**Input:** $(INPUT_FILE)" >> $REPORT
-        echo "**Ingress resources tested:** $(INGRESS_COUNT)" >> $REPORT
-        echo "" >> $REPORT
-
-        echo "## Resource Count by Emitter" >> $REPORT
-        echo "" >> $REPORT
-        echo "| Emitter | HTTPRoutes | Gateways | Other |" >> $REPORT
-        echo "|---------|------------|----------|-------|" >> $REPORT
-
-        for EMITTER in ngf envoy kgateway traefik; do
-          FILE=$(OUTPUT_DIR)/gateway-output-${EMITTER}.yaml
-          if [ -f "$FILE" ] && [ -s "$FILE" ]; then
-            HTTPROUTES=$(grep -c "kind: HTTPRoute" $FILE || echo 0)
-            GATEWAYS=$(grep -c "kind: Gateway$" $FILE || echo 0)
-            OTHER=$(grep "^kind:" $FILE | grep -v "HTTPRoute\|^kind: Gateway$" | wc -l || echo 0)
-            echo "| ${EMITTER} | ${HTTPROUTES} | ${GATEWAYS} | ${OTHER} |" >> $REPORT
-          else
-            echo "| ${EMITTER} | - | - | no output |" >> $REPORT
-          fi
-        done
-
-        echo "" >> $REPORT
-        echo "## Warnings per Emitter" >> $REPORT
-        echo "" >> $REPORT
-
-        for EMITTER in ngf envoy kgateway traefik; do
-          WARN_FILE=$(OUTPUT_DIR)/warnings-${EMITTER}.txt
-          echo "### ${EMITTER}" >> $REPORT
-          echo "" >> $REPORT
-          if [ -f "$WARN_FILE" ] && [ -s "$WARN_FILE" ]; then
-            echo '```' >> $REPORT
-            cat $WARN_FILE >> $REPORT
-            echo '```' >> $REPORT
-          else
-            echo "_No warnings_" >> $REPORT
-          fi
-          echo "" >> $REPORT
-        done
-
-        echo "## Diff: NGF vs Envoy Gateway" >> $REPORT
-        echo "" >> $REPORT
-        echo '```diff' >> $REPORT
-        diff \
-          <(grep "^kind:\|^  name:\|type:" $(OUTPUT_DIR)/gateway-output-ngf.yaml 2>/dev/null || echo "") \
-          <(grep "^kind:\|^  name:\|type:" $(OUTPUT_DIR)/gateway-output-envoy.yaml 2>/dev/null || echo "") \
-          >> $REPORT || true
-        echo '```' >> $REPORT
-
-        echo "" >> $REPORT
-        echo "---" >> $REPORT
-        echo "_Generated by ingress-migration-test pipeline_" >> $REPORT
-
-        echo "##[section]Report generated:"
-        cat $REPORT
-      displayName: 'Generate comparison report'
-
-    # --- Publish all outputs as artifact ---
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish gateway manifests'
-      inputs:
-        targetPath: '$(OUTPUT_DIR)'
-        artifact: 'gateway-outputs'
-        publishLocation: 'pipeline'
-
-    # --- Publish report as artifact ---
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish migration report'
-      inputs:
-        targetPath: '$(REPORT_DIR)'
-        artifact: 'migration-report'
-        publishLocation: 'pipeline'
-
-    # --- Fail the job if ALL emitters produced empty output ---
-    - script: |
-        EMPTY=0
-        for EMITTER in ngf envoy kgateway; do
-          FILE=$(OUTPUT_DIR)/gateway-output-${EMITTER}.yaml
-          if [ ! -s "$FILE" ]; then
-            echo "##[warning]Empty output for emitter: ${EMITTER}"
-            EMPTY=$((EMPTY + 1))
-          fi
-        done
-        if [ "$EMPTY" -eq 3 ]; then
-          echo "##[error]All emitters produced empty output — check input file."
-          exit 1
-        fi
-      displayName: 'Validate outputs are non-empty'
-
+---
 # =============================================================================
-# STAGE 2 — Lint converted manifests
+# 2. SSL / TLS REDIRECT
+# Expected NGF equivalent: HTTPRoute RequestRedirect filter
 # =============================================================================
-- stage: Lint
-  displayName: 'Lint Gateway API manifests'
-  dependsOn: Convert
-  condition: succeeded()
-  jobs:
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-02-ssl-redirect
+  namespace: bookinfo
+  labels:
+    test-category: ssl
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-02-ssl
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-  - job: LintManifests
-    displayName: 'kubeconform validation'
-    pool:
-      vmImage: 'ubuntu-latest'
+---
+# =============================================================================
+# 3. REWRITE TARGET
+# Expected NGF equivalent: HTTPRoute URLRewrite filter
+# NOTE: Regex-based rewrites may NOT convert automatically
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-03-rewrite
+  namespace: bookinfo
+  labels:
+    test-category: rewrite
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-03-rewrite(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-    steps:
+---
+# =============================================================================
+# 4. REQUEST HEADERS (proxy-set-headers / custom-headers)
+# Expected NGF equivalent: HTTPRoute RequestHeaderModifier filter
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-04-request-headers
+  namespace: bookinfo
+  labels:
+    test-category: headers
+  annotations:
+    nginx.ingress.kubernetes.io/custom-headers: "bookinfo/test-custom-headers"
+    nginx.ingress.kubernetes.io/proxy-set-headers: "bookinfo/test-custom-headers"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-04-req-headers
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download gateway outputs'
-      inputs:
-        artifactName: 'gateway-outputs'
-        targetPath: '$(Pipeline.Workspace)/gateway-outputs'
+# ConfigMap referenced by test-04
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-custom-headers
+  namespace: bookinfo
+data:
+  X-Test-Header: "ngf-migration-test"
+  X-Real-IP: "$remote_addr"
+  X-Forwarded-For: "$proxy_add_x_forwarded_for"
 
-    - script: |
-        # Install kubeconform
-        VERSION="v0.6.7"
-        curl -sL "https://github.com/yannh/kubeconform/releases/download/${VERSION}/kubeconform-linux-amd64.tar.gz" \
-          | tar -xz -C /usr/local/bin kubeconform
-        kubeconform -v
-      displayName: 'Install kubeconform'
+---
+# =============================================================================
+# 5. RESPONSE HEADERS (add-headers / hide-headers)
+# Expected NGF equivalent: HTTPRoute ResponseHeaderModifier filter
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-05-response-headers
+  namespace: bookinfo
+  labels:
+    test-category: headers
+  annotations:
+    nginx.ingress.kubernetes.io/hide-headers: "X-Powered-By,Server"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-05-resp-headers
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-    - script: |
-        SCHEMA_URL="https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master"
-        GW_SCHEMA="https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/gateway.networking.k8s.io"
+---
+# =============================================================================
+# 6. RATE LIMITING
+# Expected NGF equivalent: RateLimitPolicy (NOT natively in Gateway API core)
+# LIKELY UNSUPPORTED in NGF OSS — will show WARNING
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-06-rate-limit
+  namespace: bookinfo
+  labels:
+    test-category: rate-limit
+  annotations:
+    nginx.ingress.kubernetes.io/limit-rps: "10"
+    nginx.ingress.kubernetes.io/limit-rpm: "100"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/limit-connections: "5"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-06-ratelimit
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-        EXIT_CODE=0
-        for FILE in $(Pipeline.Workspace)/gateway-outputs/gateway-output-*.yaml; do
-          EMITTER=$(basename $FILE .yaml | sed 's/gateway-output-//')
-          echo "##[section]Linting: ${EMITTER}"
+---
+# =============================================================================
+# 7. TIMEOUTS & PROXY SETTINGS
+# Expected NGF equivalent: ClientSettingsPolicy or BackendLBPolicy
+# Partial support — connect/read timeouts may not map 1:1
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-07-timeouts
+  namespace: bookinfo
+  labels:
+    test-category: proxy-settings
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "16k"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-07-timeouts
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-          if [ ! -s "$FILE" ]; then
-            echo "##[warning]Skipping empty file: $FILE"
-            continue
-          fi
+---
+# =============================================================================
+# 8. CORS
+# Expected NGF equivalent: HTTPRoute CORSFilter (Gateway API v1.1+)
+# Support varies — NGF may handle via ResponseHeaderModifier workaround
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-08-cors
+  namespace: bookinfo
+  labels:
+    test-category: cors
+  annotations:
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://traefikdemotest.azure.nl.eu.abnamro.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Content-Type, Authorization, X-ABN-CorrelationId"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/cors-max-age: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-08-cors
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-          kubeconform \
-            -schema-location default \
-            -schema-location "${GW_SCHEMA}/httproute_v1.json" \
-            -schema-location "${GW_SCHEMA}/gateway_v1.json" \
-            -ignore-missing-schemas \
-            -summary \
-            "$FILE" || EXIT_CODE=$?
+---
+# =============================================================================
+# 9. BACKEND PROTOCOL (gRPC / WebSocket / HTTPS)
+# Expected NGF equivalent: native HTTPRoute / GRPCRoute
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-09-backend-protocol
+  namespace: bookinfo
+  labels:
+    test-category: backend-protocol
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/websocket-services: "productpage"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-09-backend-proto
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-          echo ""
-        done
+---
+# =============================================================================
+# 10. CANARY / TRAFFIC SPLITTING
+# Expected NGF equivalent: HTTPRoute weights or header-based matches
+# ingress2gateway converts this to HTTPRoute conditions — verify carefully
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-10-canary
+  namespace: bookinfo
+  labels:
+    test-category: canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "always"
+    nginx.ingress.kubernetes.io/canary-weight: "20"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-10-canary
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
 
-        exit $EXIT_CODE
-      displayName: 'Validate manifests with kubeconform'
-      continueOnError: true
+---
+# =============================================================================
+# 11. SESSION AFFINITY (sticky sessions)
+# LIKELY UNSUPPORTED in NGF OSS — requires NGINX Plus
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-11-session-affinity
+  namespace: bookinfo
+  labels:
+    test-category: session-affinity
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/affinity-mode: "persistent"
+    nginx.ingress.kubernetes.io/session-cookie-name: "ABNAMRO_SESSION"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-path: "/"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-11-affinity
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
+
+---
+# =============================================================================
+# 12. mTLS / CLIENT CERTIFICATE AUTH
+# Expected NGF equivalent: BackendTLSPolicy / Gateway listener cert validation
+# Manual migration required — no direct annotation equivalent
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-12-mtls
+  namespace: bookinfo
+  labels:
+    test-category: mtls
+  annotations:
+    nginx.ingress.kubernetes.io/auth-tls-secret: "bookinfo/ca-secret"
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/auth-tls-verify-depth: "1"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-12-mtls
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
+
+---
+# =============================================================================
+# 13. EXTERNAL AUTH (auth-url)
+# UNSUPPORTED in NGF OSS — requires SecurityPolicy (ExtAuth)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-13-ext-auth
+  namespace: bookinfo
+  labels:
+    test-category: auth
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "https://auth-service.bookinfo.svc/validate"
+    nginx.ingress.kubernetes.io/auth-method: "GET"
+    nginx.ingress.kubernetes.io/auth-response-headers: "X-Auth-User,X-Auth-Role"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-13-ext-auth
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
+
+---
+# =============================================================================
+# 14. CONFIGURATION SNIPPET
+# UNSUPPORTED / SECURITY RISK — will be rejected or ignored by NGF
+# This is the #1 reason ingress-nginx was retired
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-14-snippet
+  namespace: bookinfo
+  labels:
+    test-category: snippet
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Snippet-Header: test";
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location /health { return 200 "ok"; }
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-14-snippet
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
+
+---
+# =============================================================================
+# 15. LOAD BALANCING ALGORITHM
+# UNSUPPORTED in NGF OSS (Lua-based in ingress-nginx)
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: test-15-load-balancing
+  namespace: bookinfo
+  labels:
+    test-category: load-balancing
+  annotations:
+    nginx.ingress.kubernetes.io/load-balance: "ewma"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: traefikdemotest.azure.nl.eu.abnamro.com
+    http:
+      paths:
+      - path: /zz-test-15-lb
+        pathType: Prefix
+        backend:
+          service:
+            name: productpage
+            port:
+              number: 9080
