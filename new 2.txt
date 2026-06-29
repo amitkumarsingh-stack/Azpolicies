@@ -1,8 +1,24 @@
-# Template the crds subchart directly
-helm template kyverno-crds charts/crds \
-  --set groups.wgpolicyk8s.policyreports=true \
-  --set groups.wgpolicyk8s.clusterpolicyreports=true \
-  --set groups.reports.ephemeralreports=true \
-  --set groups.reports.clusterephemeralreports=true \
-  --set reportsServer.enabled=false \
-  | kubectl apply -f -
+The Kubernetes Ingress API (networking.k8s.io/v1) has been the standard mechanism for exposing HTTP/HTTPS services from a cluster since 2015, reaching GA in 2019. It is widely adopted, well-understood by teams and tooling, and integrated with external-dns and cert-manager.
+However, the Kubernetes project has frozen further development of the Ingress API and redirected all investment to the Gateway API. The practical consequence for ABN AMRO AKS clusters is:
+•	NGINX Ingress Controller (the most widely used implementation) has been declared retired by the upstream maintainers.
+•	The AKS Application Routing add-on — which is based on managed NGINX — will stop receiving Azure support after November 2026.
+•	Microsoft has officially announced its investment is moving entirely to Gateway API-based solutions for AKS.
+
+Why Ingress Falls Short
+Beyond the retirement timeline, the Ingress API has structural limitations that have long been a source of operational friction:
+•	Limited protocol support: Only HTTP and HTTPS. TCP, UDP, and gRPC require controller-specific workarounds or extensions.
+•	Annotation overload: Advanced routing (canary, header-based, traffic splitting) relies on controller-specific annotations that are non-portable and difficult to validate or audit.
+•	No role separation: Infrastructure owners and application developers share a single resource with no enforced RBAC model at the API level.
+•	Multi-tenancy friction: No native cross-namespace routing or explicit persona boundaries, complicating shared-cluster governance.
+•	Portability gap: Switching Ingress controller implementations typically requires a full annotation rewrite.
+
+User Story Scope
+This analysis covers the following scope as defined in the acceptance criteria:
+•	Evaluate the Kubernetes Gateway API as the strategic successor.
+•	Compare the leading ingress alternatives available on AKS.
+•	Assess each option against ABN AMRO platform constraints (Cilium CNI, Azure RBAC, internal registry, GitOps/Flux, Prometheus observability).
+•	Provide an adoption recommendation with implementation path.
+
+What Is the Gateway API?
+The Kubernetes Gateway API is a set of CRD-based resources maintained by SIG-Network that provides a standardised, role-oriented, and extensible framework for ingress and mesh traffic management. It was deliberately designed to address the structural limitations of the Ingress API.
+Gateway API v1.0 reached GA in November 2023. v1.1 followed in 2024 and introduced additional stable resources. As of 2026, it is the recommended standard for all new Kubernetes networking implementations and has achieved broad industry adoption.
