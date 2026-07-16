@@ -5,12 +5,13 @@ metadata:
 spec:
   selector: projectcalico.org/namespace == "nginx-gateway"
   order: 100
+  types:
+    - Egress
   egress:
     - action: Allow
       protocol: TCP
       destination:
-        selector: 'k8s-app == "kube-apiserver" || component == "apiserver"'
-      # or, if Calico doesn't have a host-endpoint label for the API server here,
-      # you may need destination.nets: ["10.236.0.1/32"]
-  types:
-    - Egress
+        nets:
+          - 10.236.0.1/32
+        ports:
+          - 443
