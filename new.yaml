@@ -3,7 +3,7 @@ kind: GlobalNetworkPolicy
 metadata:
   name: allow-nginx-gateway-apiserver-egress
 spec:
-  selector: projectcalico.org/namespace == "nginx-gateway"
+  namespaceSelector: projectcalico.org/name == "nginx-gateway"
   order: 100
   types:
     - Egress
