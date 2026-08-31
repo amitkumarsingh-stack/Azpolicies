@@ -1,234 +1,205 @@
 # Managed Istio for AKS vs Self-Managed Istio
 
-## Overview
+## Executive Summary
 
-Azure Kubernetes Service (AKS) provides a managed Istio add-on that
-handles much of the Istio control-plane lifecycle for you.
+Azure Kubernetes Service (AKS) provides a managed Istio add-on that uses open-source Istio but adds Azure-tested compatibility, managed lifecycle, AKS integration, and Azure support.
 
-The main trade-off is:
+The core trade-off is:
 
-> **Managed Istio reduces operational effort, but gives you less control
-> over Istio internals and advanced configuration.**
+> **Managed Istio reduces operational effort, but self-managed Istio gives you more control over Istio versions, installation, configuration, and advanced features.**
 
-Self-managed Istio gives you much more flexibility, but you are
-responsible for installation, upgrades, compatibility, troubleshooting,
-and lifecycle management.
+Microsoft currently classifies Istio add-on features/configuration as **supported**, **allowed**, or **blocked**. Blocked features are prevented by AKS-managed admission webhooks; allowed features can be used but are outside Azure's support scope. 
 
-------------------------------------------------------------------------
+---
 
-## Managed Istio vs Self-Managed Istio
+# Managed Istio vs Self-Managed Istio
 
-  -----------------------------------------------------------------------
-  Area                    AKS Managed Istio       Self-Managed Istio
-  ----------------------- ----------------------- -----------------------
-  Control-plane lifecycle Azure manages it        You manage it
+| Capability / Area | AKS Managed Istio | Self-Managed Istio |
+|---|---|---|
+| **Control-plane lifecycle** | Microsoft/AKS manages control-plane lifecycle | You own installation, operation, upgrades |
+| **Operational effort** | **Low** | **High** |
+| **Azure support** | Official Azure support for supported configuration | Customer/platform team responsibility |
+| **AKS compatibility** | Istio revisions are tested against supported AKS versions | You validate compatibility yourself |
+| **Istio upgrades** | Managed lifecycle with AKS-supported revisions and upgrade process | Full control over timing and method |
+| **Istio version selection** | Limited to AKS-supported revisions | Choose upstream version |
+| **Sidecar model** | Supported | Supported |
+| **Ambient mode** | **Not currently supported** | Supported by upstream Istio |
+| **Multi-cluster mesh** | **Not currently supported** | Supported |
+| **Windows workloads** | Not currently supported | Upstream Istio limitation |
+| **IstioOperator** | **Blocked** | Supported |
+| **ProxyConfig** | **Blocked** | Supported |
+| **WorkloadEntry** | **Blocked** | Supported |
+| **WorkloadGroup** | **Blocked** | Supported |
+| **WasmPlugin** | **Blocked** | Supported |
+| **EnvoyFilter** | Allowed, but issues caused by it may be outside Azure support | Full control; you own support |
+| **MeshConfig** | Only a supported subset can be customized | Full control |
+| **Custom Istio installation** | Restricted/managed by AKS | Full control |
+| **Custom Envoy behavior** | Restricted and subject to support boundaries | Full control |
+| **Gateway API - ingress** | Supported with current add-on capabilities, but customization is constrained by AKS allow lists and revision-specific limitations | Full upstream control |
+| **Gateway API - mesh traffic / GAMMA** | Capability has historically been limited; verify current add-on revision before depending on it | Full upstream control |
+| **Gateway API - egress** | Supported only for certain/manual deployment models | Full control |
+| **Ingress gateway customization** | Restricted; only allowed fields can be customized | Full control |
+| **Custom sidecars on managed Istio gateway pods** | Not officially supported; best-effort support | Full control |
+| **Azure Monitor integration** | Verified with Azure Monitor managed Prometheus and Azure Managed Grafana | You configure/integrate it |
+| **AKS component integration** | Azure handles related integration such as control-plane scaling | You manage it |
+| **Upgrade responsibility** | Mostly Azure/AKS lifecycle | Your platform team |
+| **Troubleshooting responsibility** | Azure for supported features/configuration | Your team |
+| **Customization freedom** | **Medium/Low** | **High** |
+| **Best fit** | Standard AKS service-mesh workloads | Advanced/custom service-mesh platforms |
 
-  Istio upgrades          Azure-supported         Full control
-                          revisions/lifecycle     
+Microsoft documents the managed add-on's current limitations including Ambient mode, multi-cluster, blocked custom resources, EnvoyFilter support boundaries, and Gateway API limitations. citeturn0search0turn0search6
 
-  Istio version           Limited to              Choose upstream version
-                          AKS-supported revisions 
+---
 
-  Sidecar mode            Supported               Supported
+# What Managed Istio Gives You
 
-  Ambient mode            Currently not supported Supported by upstream
-                                                  Istio
+The AKS Istio add-on provides an officially supported and tested integration with AKS.
 
-  Multi-cluster mesh      Currently not supported Supported
+Microsoft handles or provides:
 
-  Windows workloads       Not supported           Upstream limitation
+- Istio versions tested against supported AKS versions
+- Istio control-plane scaling and configuration
+- Managed Istio lifecycle/upgrades
+- Verified external and internal ingress setup
+- Integration verification with Azure Monitor managed Prometheus
+- Integration verification with Azure Managed Grafana
+- Official Azure support for the add-on
 
-  IstioOperator           Blocked                 Supported
+This can significantly reduce the operational burden compared with running Istio yourself. citeturn0search0
 
-  ProxyConfig             Blocked                 Supported
+---
 
-  WorkloadEntry /         Blocked                 Supported
-  WorkloadGroup                                   
+# Important Managed Istio Limitations
 
-  WasmPlugin              Blocked                 Supported
+## 1. Advanced Istio Custom Resources Are Restricted
 
-  Gateway API             Limited                 Full upstream
-                                                  capability
+The following custom resources are currently blocked by the AKS managed add-on:
 
-  EnvoyFilter             Allowed, but Azure      Full control
-                          support is limited for  
-                          problems caused by it   
+```text
+ProxyConfig
+WorkloadEntry
+WorkloadGroup
+IstioOperator
+WasmPlugin
+```
 
-  MeshConfig              Only supported subset   Full control
+This is one of the biggest differences from self-managed Istio.
 
-  Custom Envoy/Istio      Restricted              Full control
-  extensions                                      
+If your platform requires deep control over Istio installation, proxy behavior, workload registration, or Wasm extensions, self-managed Istio is more flexible. citeturn0search0turn0search2
 
-  Azure support           Supported by Microsoft  Customer responsibility
-                          within the add-on       
-                          support boundary        
+---
 
-  AKS integration         Excellent               You manage integration
+## 2. Ambient Mode
 
-  Operational burden      Low                     High
-  -----------------------------------------------------------------------
+The AKS managed Istio add-on does not currently support Istio's sidecar-less Ambient mode.
 
-------------------------------------------------------------------------
+```text
+AKS Managed Istio
+       |
+       +-- Sidecar model   ✅
+       |
+       +-- Ambient model   ❌
+```
 
-## Important Managed Istio Limitations
+Microsoft describes Ambient integration as being on the roadmap. citeturn0search0
 
-### 1. You cannot treat managed Istio as completely "your Istio"
+If Ambient is part of your future service-mesh strategy, this should be a major factor in the architecture decision.
 
-Several advanced Istio configuration mechanisms are blocked in the AKS
-managed add-on.
+---
 
-Examples include:
+## 3. Multi-Cluster Mesh
 
--   `ProxyConfig`
--   `WorkloadEntry`
--   `WorkloadGroup`
--   `IstioOperator`
--   `WasmPlugin`
+The managed Istio add-on does not currently support multi-cluster deployments.
 
-This matters if your platform team needs deep control over the Istio
-installation or Envoy configuration.
+For example:
 
-With self-managed Istio, you can use the upstream `IstioOperator` API
-and control the installation and configuration more directly.
+```text
+        AKS Cluster A
+             |
+          Istio
+             |
+       Cross-cluster mesh
+             |
+          Istio
+             |
+        AKS Cluster B
+```
 
-------------------------------------------------------------------------
+If you require Istio-level cross-cluster service discovery and traffic management, self-managed Istio provides more control.
 
-### 2. Ambient mode is not currently available
+citeturn0search0
 
-The AKS managed Istio add-on currently focuses on the sidecar model.
+---
+
+## 4. Gateway API and Customization
+
+The Gateway API situation has evolved, so the exact capability depends on the AKS/Istio add-on revision.
+
+Current AKS documentation describes Gateway API ingress support for the Istio add-on, while also enforcing an AKS-managed customization allow list. Fields outside the allow list are blocked.
+
+For example:
+
+```text
+Gateway
+   |
+   +-- Allowed customization       ✅
+   |
+   +-- Unsupported customization   ❌
+```
+
+Gateway API egress also has deployment-model-specific requirements.
+
+Therefore, if Gateway API is a strategic requirement, validate the exact AKS Istio revision and deployment model you plan to use rather than assuming full upstream Istio Gateway API behavior. citeturn0search6
+
+---
+
+## 5. EnvoyFilter
+
+`EnvoyFilter` is allowed, but it has an important support caveat.
+
+```text
+EnvoyFilter
+     |
+     +-- Allowed
+     |
+     +-- Azure support for issues caused by it
+             |
+             +-- Limited / outside support scope
+```
+
+For example, custom Lua or compression-related changes can create issues that are outside the managed add-on's support scope.
+
+Self-managed Istio gives you full freedom to use EnvoyFilter, but you also own the resulting operational and troubleshooting responsibility. citeturn0search0
+
+---
+
+## 6. MeshConfig Customization
+
+The managed add-on supports customization of only a subset of `MeshConfig`.
 
 Conceptually:
 
-``` text
-AKS Managed Istio
-       |
-       +-- Sidecar model  ✅
-       |
-       +-- Ambient model  ❌
+```text
+MeshConfig
+   |
+   +-- Supported fields     ✅
+   |
+   +-- Allowed but unsupported
+   |
+   +-- Blocked fields       ❌
 ```
 
-If Ambient mode is a strategic requirement, self-managed Istio is
-currently the better option.
+This is different from self-managed Istio, where you control the full configuration.
 
-------------------------------------------------------------------------
+Microsoft's support policy explicitly distinguishes between supported, allowed, and blocked configuration. citeturn0search2
 
-### 3. Multi-cluster Istio is a major limitation
+---
 
-The managed add-on currently does not support an Istio multi-cluster
-mesh.
+# Operational Comparison
 
-For example:
+## Managed Istio
 
-``` text
-AKS Cluster A
-      |
-      | Istio
-      |
-      +---------- Cluster B
-                    |
-                   Istio
-```
-
-If you need Istio-level cross-cluster service discovery and traffic
-management, self-managed Istio provides significantly more flexibility.
-
-This is one of the most important decision points for an enterprise
-platform.
-
-------------------------------------------------------------------------
-
-### 4. Gateway API support is limited
-
-The managed add-on does not currently provide the full upstream Istio
-Gateway API capability.
-
-If your organization is standardizing on:
-
-``` text
-Gateway API
-  |
-  +-- GatewayClass
-  +-- Gateway
-  +-- HTTPRoute
-  +-- GRPCRoute
-```
-
-you should verify the current AKS add-on support before making it a core
-platform dependency.
-
-Traditional Istio APIs such as:
-
-``` text
-Gateway
-VirtualService
-DestinationRule
-```
-
-remain important for conventional Istio configurations.
-
-------------------------------------------------------------------------
-
-### 5. EnvoyFilter requires caution
-
-`EnvoyFilter` can be used with the managed add-on, but customizations
-that introduce problems are outside Microsoft's normal support boundary.
-
-For example:
-
-``` text
-EnvoyFilter
-    |
-    +-- Custom Lua
-    +-- Custom Envoy behavior
-    +-- Custom extensions
-```
-
-These can make troubleshooting more difficult because Azure may not
-support issues caused by unsupported customizations.
-
-With self-managed Istio, you have complete control, but you also own the
-troubleshooting responsibility.
-
-------------------------------------------------------------------------
-
-### 6. You do not have unlimited Istio version selection
-
-Managed Istio revisions are tied to AKS compatibility and Microsoft's
-supported revision lifecycle.
-
-The model is approximately:
-
-``` text
-AKS version
-    |
-    +-- Compatible Istio revisions
-             |
-             +-- Microsoft-supported lifecycle
-```
-
-With self-managed Istio:
-
-``` text
-You choose the Istio version
-        |
-        +-- Your upgrade schedule
-        +-- Your compatibility testing
-        +-- Your lifecycle management
-```
-
-This is a limitation if you need a specific upstream Istio release
-immediately.
-
-It is also a benefit if you prefer Azure to manage compatibility and
-lifecycle.
-
-------------------------------------------------------------------------
-
-# Where Managed Istio Works Well
-
-For a conventional AKS environment:
-
-``` text
+```text
                     Azure
                       |
                 AKS Cluster
@@ -237,7 +208,7 @@ For a conventional AKS environment:
              | Managed Istio   |
              |                 |
              | istiod           |
-             | ingress gateway  |
+             | gateways         |
              | Envoy sidecars    |
              +--------+--------+
                       |
@@ -246,100 +217,149 @@ For a conventional AKS environment:
         svc-a       svc-b       svc-c
 ```
 
-Managed Istio is a strong choice when you need:
+Azure/AKS owns much of the Istio lifecycle.
 
--   Service-to-service mTLS
--   Authorization policies
--   Traffic routing
--   Retries
--   Traffic splitting
--   Ingress/egress control
--   Standard Istio service-mesh capabilities
--   Azure monitoring integration
--   Microsoft-supported lifecycle management
+Your team primarily owns:
 
-The managed add-on is not simply "Istio Lite."
-
-For standard service-mesh functionality, it provides substantial Istio
-capability.
-
-The main limitation is **deep customization and control-plane
-ownership**.
-
-------------------------------------------------------------------------
-
-# Decision Guide
-
-## Choose AKS Managed Istio when
-
--   You have a single AKS cluster or relatively simple topology.
--   You need standard Istio sidecar functionality.
--   You need mTLS and authorization.
--   You need routing, retries, and traffic splitting.
--   You need standard ingress and egress functionality.
--   You want Azure-managed upgrades and lifecycle.
--   You want Microsoft support.
--   You do not need deep customization of Istio internals.
-
-## Choose Self-Managed Istio when
-
--   Multi-cluster mesh is important.
--   Ambient mode is important.
--   You need `IstioOperator`.
--   You need advanced `ProxyConfig`.
--   You need `WorkloadEntry` or `WorkloadGroup`.
--   You need custom Wasm extensions.
--   You require a specific upstream Istio version.
--   You heavily depend on `EnvoyFilter`.
--   You need advanced Envoy/Istio customization.
--   You need capabilities before they are exposed through the AKS
-    add-on.
-
-------------------------------------------------------------------------
-
-# Recommended Evaluation Criteria
-
-For an enterprise AKS platform, evaluate these areas first:
-
-1.  **Multi-cluster requirements**
-2.  **Gateway API requirements**
-3.  **Need for custom Istio configuration**
-4.  **Need for EnvoyFilter/Wasm extensions**
-5.  **Istio version control**
-6.  **Operational ownership**
-7.  **Microsoft support requirements**
-8.  **Future requirement for Ambient mode**
-
-A useful decision matrix is:
-
-``` text
-                    Managed Istio       Self-Managed Istio
-----------------------------------------------------------------
-Operational effort       Low                    High
-Azure integration        High                   Medium
-Configuration control    Medium/Low             High
-Version control          Medium/Low             High
-Advanced customization   Limited                High
-Multi-cluster            Limited                High
-Ambient                  Limited                High
-Microsoft support        High                   Customer-owned
+```text
+Applications
+     |
+Istio policies
+     |
+Traffic configuration
+     |
+Security configuration
+     |
+Observability configuration
 ```
 
-## Bottom line
+---
 
-For most standard AKS service-mesh deployments:
+## Self-Managed Istio
+
+```text
+                Your Platform Team
+                       |
+             +---------+---------+
+             |                   |
+        Istio Lifecycle      AKS Cluster
+             |                   |
+       +-----+-----+             |
+       |           |             |
+     istiod     gateways       Apps
+       |
+   Envoy sidecars
+```
+
+Your platform team owns:
+
+- Installation
+- Version selection
+- Upgrades
+- Rollbacks
+- Control-plane scaling
+- Compatibility testing
+- Istio configuration
+- Envoy customization
+- Troubleshooting
+
+This provides maximum flexibility but increases operational responsibility.
+
+---
+
+# When to Choose Managed Istio
+
+Choose **AKS Managed Istio** when:
+
+- You primarily have standard AKS workloads.
+- You want service-to-service mTLS.
+- You need authorization policies.
+- You need traffic routing.
+- You need retries and traffic splitting.
+- You need standard ingress and egress.
+- You want Microsoft-managed lifecycle.
+- You want Azure support.
+- You want verified AKS/Azure integration.
+- You don't need deep customization of Istio internals.
+
+---
+
+# When to Choose Self-Managed Istio
+
+Choose **Self-Managed Istio** when:
+
+- Multi-cluster mesh is a core requirement.
+- Ambient mode is a requirement.
+- You need `IstioOperator`.
+- You need advanced `ProxyConfig`.
+- You need `WorkloadEntry` or `WorkloadGroup`.
+- You need Wasm extensions.
+- You need unrestricted EnvoyFilter usage.
+- You require a particular upstream Istio version.
+- You need full MeshConfig control.
+- You have significant custom Envoy/Istio requirements.
+- Your platform team is comfortable owning Istio lifecycle and support.
+
+---
+
+# Enterprise Decision Matrix
+
+| Requirement | Recommendation |
+|---|---|
+| Single AKS cluster + standard mTLS | **Managed Istio** |
+| Standard service-to-service authorization | **Managed Istio** |
+| Standard traffic routing | **Managed Istio** |
+| Low operational overhead | **Managed Istio** |
+| Strong Microsoft support requirement | **Managed Istio** |
+| Multi-cluster service mesh | **Self-managed Istio** |
+| Ambient mode | **Self-managed Istio** |
+| Heavy EnvoyFilter customization | **Self-managed Istio** |
+| Wasm extensions | **Self-managed Istio** |
+| Full IstioOperator control | **Self-managed Istio** |
+| Full MeshConfig control | **Self-managed Istio** |
+| Need a specific upstream Istio release | **Self-managed Istio** |
+| Platform team wants complete Istio control | **Self-managed Istio** |
+
+---
+
+# Bottom Line
+
+For most standard AKS deployments:
 
 > **Start with AKS Managed Istio.**
 
-Move toward self-managed Istio when your requirements depend on
-capabilities that the AKS add-on intentionally restricts, especially:
+It gives you the core Istio service-mesh capabilities while significantly reducing lifecycle and operational work.
 
-> **multi-cluster + Ambient + advanced customization + full version
-> control.**
+Move toward self-managed Istio when your architecture requires:
 
-## Microsoft references
+> **Multi-cluster + Ambient + advanced customization + full version/configuration control.**
 
--   AKS Istio add-on overview:
-    https://learn.microsoft.com/en-us/azure/aks/istio-about
--   AKS Istio support policy:
-    https://learn.microsoft.com/en-us/azure/aks/istio-support-policy
+The most important thing is not to compare them based only on basic Istio features. The real architectural difference is:
+
+```text
+             Managed Istio
+                  |
+        Convenience + Support
+                  |
+                  v
+       Less operational control
+
+
+             Self-Managed Istio
+                  |
+        Maximum flexibility
+                  |
+                  v
+       More operational ownership
+```
+
+## Microsoft References
+
+- AKS Istio add-on overview:
+  https://learn.microsoft.com/en-us/azure/aks/istio-about
+
+- AKS Istio support policy:
+  https://learn.microsoft.com/en-us/azure/aks/istio-support-policy
+
+- AKS Istio Gateway API:
+  https://learn.microsoft.com/en-us/azure/aks/istio-gateway-api
