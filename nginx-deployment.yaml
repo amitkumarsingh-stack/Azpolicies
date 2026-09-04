@@ -1,23 +1,13 @@
 apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+kind: ReferenceGrant
 metadata:
-  name: attack-to-b
-  namespace: tenant-a
+  name: allow-team-a
+  namespace: team-b
 spec:
-  parentRefs:
-  - name: shared-gateway
-    namespace: gateway-system
-
-  hostnames:
-  - attack-a.example.test
-
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-
-    backendRefs:
-    - name: app-b
-      namespace: tenant-b
-      port: 80
+  from:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    namespace: team-a
+  to:
+  - group: ""
+    kind: Service
