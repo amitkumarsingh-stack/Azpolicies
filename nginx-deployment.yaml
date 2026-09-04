@@ -1,57 +1,14 @@
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
+apiVersion: v1
+kind: Pod
 metadata:
-  name: shared-gateway
-  namespace: gateway-system
+  name: test-client
+  namespace: tenant-a
+  labels:
+    app: test-client
 spec:
-  gatewayClassName: <YOUR_KGATEWAY_GATEWAYCLASS>
-
-  listeners:
-
-  - name: https-a
-    protocol: HTTPS
-    port: 443
-    hostname: a.example.test
-    tls:
-      mode: Terminate
-      certificateRefs:
-      - kind: Secret
-        name: tls-a
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-access: "true"
-
-  - name: https-b
-    protocol: HTTPS
-    port: 443
-    hostname: b.example.test
-    tls:
-      mode: Terminate
-      certificateRefs:
-      - kind: Secret
-        name: tls-b
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-access: "true"
-
-  - name: https-c
-    protocol: HTTPS
-    port: 443
-    hostname: c.example.test
-    tls:
-      mode: Terminate
-      certificateRefs:
-      - kind: Secret
-        name: tls-c
-    allowedRoutes:
-      namespaces:
-        from: Selector
-        selector:
-          matchLabels:
-            gateway-access: "true"
+  containers:
+  - name: curl
+    image: curlimages/curl:8.10.1
+    command:
+    - sleep
+    - "3600"
