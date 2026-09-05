@@ -1,13 +1,34 @@
-apiVersion: gateway.networking.k8s.io/v1
-kind: ReferenceGrant
+cat > team-a-rbac.yaml <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
-  name: allow-team-a
-  namespace: team-b
-spec:
-  from:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    namespace: team-a
-  to:
-  - group: ""
-    kind: Service
+  name: tenant-route-manager
+  namespace: team-a
+rules:
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tenant-route-manager
+  namespace: team-a
+subjects:
+- kind: ServiceAccount
+  name: rbac-test
+  namespace: team-a
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: tenant-route-manager
+EOF
