@@ -1,0 +1,2073 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "AKS cluster health: node readiness and pressure, problem pods, and active alerts",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Core Kubernetes – AKS",
+      "type": "link",
+      "url": "/d/aks-core-k8s",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Node Health",
+      "collapsed": false,
+      "id": 1,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Not Ready Nodes",
+      "description": "Nodes whose Ready condition is not true (False or Unknown)",
+      "id": 2,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (kube_node_status_condition{condition=\"Ready\", status!=\"true\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Nodes Under Pressure",
+      "description": "Nodes reporting MemoryPressure, DiskPressure or PIDPressure",
+      "id": 3,
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count by (cluster) (max by (cluster, node) (kube_node_status_condition{condition=~\"MemoryPressure|DiskPressure|PIDPressure\", status=\"true\", cluster=~\"$cluster\"}) == 1) or sum by (cluster) (kube_node_status_condition{condition=\"Ready\", status=\"true\", cluster=~\"$cluster\"}) * 0",
+          "legendFormat": "{{cluster}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Node Pressure Conditions",
+      "description": "Every node, with each pressure condition. Red cells mean the condition is active.",
+      "id": 4,
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kube_node_status_condition{condition=~\"Ready|MemoryPressure|DiskPressure|PIDPressure|NetworkUnavailable\", status=\"true\", cluster=~\"$cluster\"}",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "condition",
+            "rowField": "node",
+            "valueField": "Value",
+            "emptyValue": "null"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "node\\condition": "Node"
+            },
+            "indexByName": {
+              "node\\condition": 0,
+              "Ready": 1,
+              "MemoryPressure": 2,
+              "DiskPressure": 3,
+              "PIDPressure": 4,
+              "NetworkUnavailable": 5
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background"
+            }
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "OK",
+                  "color": "green",
+                  "index": 0
+                },
+                "1": {
+                  "text": "ACTIVE",
+                  "color": "red",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "transparent"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "NOT READY",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "Ready",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Node"
+            },
+            "properties": [
+              {
+                "id": "custom.align",
+                "value": "left"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Ready",
+            "desc": false
+          }
+        ]
+      }
+    },
+    {
+      "type": "state-timeline",
+      "title": "Node Readiness Timeline",
+      "description": "Ready state of every node over the selected time range",
+      "id": 5,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, node) (kube_node_status_condition{condition=\"Ready\", status=\"true\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}} / {{node}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 80,
+            "lineWidth": 0
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Not Ready",
+                  "color": "red",
+                  "index": 0
+                },
+                "1": {
+                  "text": "Ready",
+                  "color": "green",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "showValue": "never",
+        "mergeValues": true,
+        "alignValue": "left",
+        "rowHeight": 0.85,
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Pod Health",
+      "collapsed": false,
+      "id": 6,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Pending Pods",
+      "description": "Pods in Pending phase (includes image pulls and init containers, not only scheduling)",
+      "id": 7,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Failed Pods",
+      "description": "Pods in Failed phase that still exist in the API (completed Jobs are excluded; they are Succeeded)",
+      "id": 8,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 8,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (kube_pod_status_phase{phase=\"Failed\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Unscheduled Pods",
+      "description": "Pending pods that have not been assigned to a node, usually insufficient CPU/memory, taints, or affinity rules",
+      "id": 9,
+      "gridPos": {
+        "h": 6,
+        "w": 8,
+        "x": 16,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count by (cluster) (kube_pod_info{node=\"\", cluster=~\"$cluster\"} * on (cluster, namespace, pod) group_left() (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"} == 1)) or sum by (cluster) (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"}) * 0",
+          "legendFormat": "{{cluster}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pending / Failed / Unscheduled Over Time",
+      "id": 10,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}} – Pending",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster) (kube_pod_status_phase{phase=\"Failed\", cluster=~\"$cluster\"})",
+          "legendFormat": "{{cluster}} – Failed",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count by (cluster) (kube_pod_info{node=\"\", cluster=~\"$cluster\"} * on (cluster, namespace, pod) group_left() (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"} == 1)) or sum by (cluster) (kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"}) * 0",
+          "legendFormat": "{{cluster}} – Unscheduled",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Problem Pods (Pending / Failed)",
+      "description": "Current Pending and Failed pods. 'Node' is empty when the pod is unscheduled.",
+      "id": 11,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(kube_pod_status_phase{phase=~\"Pending|Failed\", cluster=~\"$cluster\"} == 1) * on (cluster, namespace, pod) group_left(node) max by (cluster, namespace, pod, node) (kube_pod_info{cluster=~\"$cluster\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "uid": true,
+              "service": true,
+              "endpoint": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "pod": 2,
+              "phase": 3,
+              "node": 4
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "phase": "Phase",
+              "node": "Node"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Pending": {
+                        "color": "orange",
+                        "index": 0
+                      },
+                      "Failed": {
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Alert Checks (Prometheus)",
+      "collapsed": false,
+      "id": 12,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "CrashLoopBackOff",
+      "description": "Containers currently waiting in CrashLoopBackOff",
+      "id": 13,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 0,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\", cluster=~\"$cluster\"} == 1)) or vector(0)",
+          "legendFormat": "CrashLoopBackOff",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Image Pull Errors",
+      "description": "Containers that cannot pull their image",
+      "id": 14,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 3,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((kube_pod_container_status_waiting_reason{reason=~\"ImagePullBackOff|ErrImagePull\", cluster=~\"$cluster\"} == 1)) or vector(0)",
+          "legendFormat": "Image Pull Errors",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Frequent Restarts",
+      "description": "Containers that restarted more than 3 times in the last hour",
+      "id": 15,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 6,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((increase(kube_pod_container_status_restarts_total{cluster=~\"$cluster\"}[1h]) > 3)) or vector(0)",
+          "legendFormat": "Frequent Restarts",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Pods Stuck Pending",
+      "description": "Pods that have been Pending for at least 15 minutes",
+      "id": 16,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 9,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((min_over_time(kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"}[15m]) == 1)) or vector(0)",
+          "legendFormat": "Pods Stuck Pending",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Deployments Degraded",
+      "description": "Deployments with fewer ready replicas than desired (value = missing replicas)",
+      "id": 17,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 12,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(((kube_deployment_spec_replicas{cluster=~\"$cluster\"} - on (cluster, namespace, deployment) kube_deployment_status_replicas_ready{cluster=~\"$cluster\"}) > 0)) or vector(0)",
+          "legendFormat": "Deployments Degraded",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Node CPU > 90%",
+      "description": "Nodes using more than 90% CPU over the last 5 minutes",
+      "id": 18,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 15,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((100 * (1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$cluster\"}[5m]))) > 90)) or vector(0)",
+          "legendFormat": "Node CPU > 90%",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Node Memory > 90%",
+      "description": "Nodes using more than 90% of memory",
+      "id": 19,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 18,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((100 * (1 - node_memory_MemAvailable_bytes{cluster=~\"$cluster\"} / node_memory_MemTotal_bytes{cluster=~\"$cluster\"}) > 90)) or vector(0)",
+          "legendFormat": "Node Memory > 90%",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Node Disk > 85%",
+      "description": "Nodes whose root filesystem is more than 85% full",
+      "id": 20,
+      "gridPos": {
+        "h": 5,
+        "w": 3,
+        "x": 21,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", cluster=~\"$cluster\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", cluster=~\"$cluster\"}) > 85)) or vector(0)",
+          "legendFormat": "Node Disk > 85%",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Firing Checks",
+      "description": "Every object currently breaching one of the checks. Empty means all clear.",
+      "id": 21,
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(kube_pod_container_status_waiting_reason{reason=\"CrashLoopBackOff\", cluster=~\"$cluster\"} == 1, \"alert\", \"CrashLoopBackOff\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(kube_pod_container_status_waiting_reason{reason=~\"ImagePullBackOff|ErrImagePull\", cluster=~\"$cluster\"} == 1, \"alert\", \"ImagePullError\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(increase(kube_pod_container_status_restarts_total{cluster=~\"$cluster\"}[1h]) > 3, \"alert\", \"FrequentRestarts\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(min_over_time(kube_pod_status_phase{phase=\"Pending\", cluster=~\"$cluster\"}[15m]) == 1, \"alert\", \"PodStuckPending\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace((kube_deployment_spec_replicas{cluster=~\"$cluster\"} - on (cluster, namespace, deployment) kube_deployment_status_replicas_ready{cluster=~\"$cluster\"}) > 0, \"alert\", \"DeploymentReplicasMismatch\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(100 * (1 - avg by (cluster, instance) (rate(node_cpu_seconds_total{mode=\"idle\", cluster=~\"$cluster\"}[5m]))) > 90, \"alert\", \"NodeHighCPU\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(100 * (1 - node_memory_MemAvailable_bytes{cluster=~\"$cluster\"} / node_memory_MemTotal_bytes{cluster=~\"$cluster\"}) > 90, \"alert\", \"NodeHighMemory\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", cluster=~\"$cluster\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\", cluster=~\"$cluster\"}) > 85, \"alert\", \"NodeDiskFilling\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "I",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace((kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\"} - on (cluster, namespace, daemonset) kube_daemonset_status_number_ready{cluster=~\"$cluster\"}) > 0, \"alert\", \"DaemonSetNotReady\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "J",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(kube_node_status_condition{condition=\"Ready\", status=\"true\", cluster=~\"$cluster\"} == 0, \"alert\", \"NodeNotReady\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "__name__": true,
+              "job": true,
+              "uid": true,
+              "service": true,
+              "endpoint": true,
+              "reason": true,
+              "condition": true,
+              "status": true,
+              "phase": true,
+              "mountpoint": true,
+              "fstype": true,
+              "device": true
+            },
+            "indexByName": {
+              "severity": 0,
+              "alert": 1,
+              "cluster": 2,
+              "namespace": 3,
+              "pod": 4,
+              "container": 5,
+              "deployment": 6,
+              "daemonset": 7,
+              "node": 8,
+              "instance": 9,
+              "Value": 10
+            },
+            "renameByName": {
+              "severity": "Severity",
+              "alert": "Check",
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "container": "Container",
+              "deployment": "Deployment",
+              "daemonset": "DaemonSet",
+              "node": "Node",
+              "instance": "Instance",
+              "Value": "Value"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Severity"
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "warning": {
+                        "color": "orange",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Azure Monitor Alerts",
+      "collapsed": false,
+      "id": 22,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 48
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Fired Azure Alerts by Severity",
+      "description": "Open Azure Monitor alerts in the selected subscription (includes Prometheus rule group alerts and the AKS recommended alerts)",
+      "id": 23,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 0,
+        "y": 49
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "${azure_monitor}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "${azure_monitor}"
+          },
+          "queryType": "Azure Resource Graph",
+          "subscriptions": [
+            "$subscription"
+          ],
+          "azureResourceGraph": {
+            "query": "alertsmanagementresources\n| where type =~ 'microsoft.alertsmanagement/alerts'\n| where tostring(properties.essentials.monitorCondition) =~ 'Fired'\n| where tostring(properties.essentials.alertState) !~ 'Closed'\n| extend Severity = tostring(properties.essentials.severity)\n| summarize Count = count() by Severity\n| order by Severity asc",
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sev0"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sev1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sev2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sev3"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sev4"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "rowsToFields",
+          "options": {
+            "mappings": [
+              {
+                "fieldName": "Severity",
+                "handlerKey": "field.name"
+              },
+              {
+                "fieldName": "Count",
+                "handlerKey": "field.value"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Active Azure Alerts",
+      "id": 24,
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 6,
+        "y": 49
+      },
+      "datasource": {
+        "type": "grafana-azure-monitor-datasource",
+        "uid": "${azure_monitor}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-azure-monitor-datasource",
+            "uid": "${azure_monitor}"
+          },
+          "queryType": "Azure Resource Graph",
+          "subscriptions": [
+            "$subscription"
+          ],
+          "azureResourceGraph": {
+            "query": "alertsmanagementresources\n| where type =~ 'microsoft.alertsmanagement/alerts'\n| where tostring(properties.essentials.monitorCondition) =~ 'Fired'\n| where tostring(properties.essentials.alertState) !~ 'Closed'\n| project FiredAt = todatetime(properties.essentials.startDateTime),\n          Severity = tostring(properties.essentials.severity),\n          Alert = name,\n          Target = tostring(properties.essentials.targetResourceName),\n          Source = tostring(properties.essentials.monitorService),\n          State = tostring(properties.essentials.alertState)\n| order by FiredAt desc",
+            "resultFormat": "table"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Sev0": {
+                        "color": "dark-red",
+                        "index": 0
+                      },
+                      "Sev1": {
+                        "color": "red",
+                        "index": 1
+                      },
+                      "Sev2": {
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "Sev3": {
+                        "color": "yellow",
+                        "index": 3
+                      },
+                      "Sev4": {
+                        "color": "blue",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "FiredAt"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeAsLocal"
+              },
+              {
+                "id": "custom.width",
+                "value": 170
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "alertlist",
+      "title": "Grafana Alerts (Firing / Pending)",
+      "description": "Grafana-managed alert rules, if you define any",
+      "id": 25,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 49
+      },
+      "options": {
+        "viewMode": "list",
+        "groupMode": "default",
+        "groupBy": [],
+        "maxItems": 20,
+        "sortOrder": 1,
+        "dashboardAlerts": false,
+        "alertName": "",
+        "alertInstanceLabelFilter": "",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": true,
+          "normal": false,
+          "error": true
+        },
+        "folder": null,
+        "showInstances": true
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "kubernetes",
+    "aks",
+    "azure-managed-prometheus",
+    "health"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "regex": "",
+        "options": []
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_node_status_condition, cluster)",
+        "query": {
+          "query": "label_values(kube_node_status_condition, cluster)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "azure_monitor",
+        "label": "Azure Monitor",
+        "type": "datasource",
+        "query": "grafana-azure-monitor-datasource",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "regex": "",
+        "options": []
+      },
+      {
+        "name": "subscription",
+        "label": "Subscription ID",
+        "type": "textbox",
+        "description": "Azure subscription ID that holds your AKS clusters and Azure Monitor workspace",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "hide": 0,
+        "options": []
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Cluster Health – AKS",
+  "uid": "aks-cluster-health",
+  "version": 1,
+  "weekStart": ""
+}
