@@ -1,0 +1,3095 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Deployments, StatefulSets, DaemonSets, rollout failures and resource usage by workload on AKS (Azure managed Prometheus)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Core Kubernetes – AKS",
+      "type": "link",
+      "url": "/d/aks-core-k8s",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Cluster Health – AKS",
+      "type": "link",
+      "url": "/d/aks-cluster-health",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Namespace Performance – AKS",
+      "type": "link",
+      "url": "/d/aks-namespace-perf",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Pods – AKS",
+      "type": "link",
+      "url": "/d/aks-pods",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "id": 1,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Deployments",
+      "description": "Deployments in the selection",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}))",
+          "legendFormat": "Deployments",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Deployments Fully Available",
+      "description": "Share of deployments with all desired replicas available",
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * count((max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) >= on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}))) / count(max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}))",
+          "legendFormat": "Deployments Fully Available",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 90
+              },
+              {
+                "color": "green",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Degraded Deployments",
+      "description": "Deployments with fewer available replicas than desired",
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) > 0) or vector(0)",
+          "legendFormat": "Degraded Deployments",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "StatefulSets Not Ready",
+      "description": "StatefulSets with fewer ready replicas than desired",
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count((max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) - on (cluster, namespace, statefulset) (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) > 0) or vector(0)",
+          "legendFormat": "StatefulSets Not Ready",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Unhealthy DaemonSets",
+      "description": "DaemonSets where ready pods are fewer than desired, or pods are misscheduled",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(((max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) - on (cluster, namespace, daemonset) (max by (cluster, namespace, daemonset) (kube_daemonset_status_number_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) > 0) or ((max by (cluster, namespace, daemonset) (kube_daemonset_status_number_misscheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) > 0)) or vector(0)",
+          "legendFormat": "Unhealthy DaemonSets",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "row",
+      "title": "Deployment Replica Status",
+      "collapsed": false,
+      "id": 7,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "Deployments",
+      "description": "Desired vs ready, available and updated replicas. Lowest availability first.",
+      "id": 8,
+      "gridPos": {
+        "h": 10,
+        "w": 14,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, deployment) (kube_deployment_status_replicas_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, deployment) (kube_deployment_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "clamp_min((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})), 0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) / on (cluster, namespace, deployment) ((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) > 0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "deployment": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "deployment": "Deployment",
+              "Value #A": "Desired",
+              "Value #B": "Ready",
+              "Value #C": "Available",
+              "Value #D": "Up-to-date",
+              "Value #E": "Unavailable",
+              "Value #F": "Available %"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Available %",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Desired"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Up-to-date"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unavailable"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Unavailable Replicas by Deployment",
+      "description": "Desired minus available replicas, only deployments that are short",
+      "id": 9,
+      "gridPos": {
+        "h": 10,
+        "w": 10,
+        "x": 14,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) > 0",
+          "legendFormat": "{{namespace}} / {{deployment}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "StatefulSet Status",
+      "collapsed": false,
+      "id": 10,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "StatefulSets",
+      "description": "Desired vs current, ready and updated replicas. Lowest readiness first.",
+      "id": 11,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_current{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) / on (cluster, namespace, statefulset) ((max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) > 0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "statefulset": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "statefulset": "StatefulSet",
+              "Value #A": "Desired",
+              "Value #B": "Current",
+              "Value #C": "Ready",
+              "Value #D": "Updated",
+              "Value #E": "Ready %"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Ready %",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Desired"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Current"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Updated"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Not-Ready Replicas by StatefulSet",
+      "description": "Desired minus ready replicas, only StatefulSets that are short",
+      "id": 12,
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 14,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) - on (cluster, namespace, statefulset) (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) > 0",
+          "legendFormat": "{{namespace}} / {{statefulset}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "DaemonSet Health",
+      "collapsed": false,
+      "id": 13,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "panels": []
+    },
+    {
+      "type": "table",
+      "title": "DaemonSets",
+      "description": "Desired vs scheduled, ready, available and updated pods. Misscheduled means a pod is running on a node it should not.",
+      "id": 14,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_current_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_number_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_number_available{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_updated_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, daemonset) (kube_daemonset_status_number_misscheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (max by (cluster, namespace, daemonset) (kube_daemonset_status_number_ready{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) / on (cluster, namespace, daemonset) ((max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) > 0)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "daemonset": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 8,
+              "Value #G": 9
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "daemonset": "DaemonSet",
+              "Value #A": "Desired",
+              "Value #B": "Scheduled",
+              "Value #C": "Ready",
+              "Value #D": "Available",
+              "Value #E": "Updated",
+              "Value #F": "Misscheduled",
+              "Value #G": "Ready %"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Ready %",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Desired"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Scheduled"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Updated"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Misscheduled"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ready %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 50
+                    },
+                    {
+                      "color": "green",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Misscheduled"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Unavailable DaemonSet Pods",
+      "description": "Desired minus available pods, only DaemonSets that are short",
+      "id": 15,
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 14,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) - on (cluster, namespace, daemonset) (max by (cluster, namespace, daemonset) (kube_daemonset_status_number_available{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) > 0",
+          "legendFormat": "{{namespace}} / {{daemonset}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Rollout Failures",
+      "collapsed": false,
+      "id": 16,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Deployment Rollout Stuck",
+      "description": "",
+      "id": 17,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")) or vector(0)",
+          "legendFormat": "Deployment Rollout Stuck",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Progress Deadline Exceeded",
+      "description": "",
+      "id": 18,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(max by (cluster, namespace, deployment) (kube_deployment_status_condition{condition=\"Progressing\", status=\"false\", cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}) == 1, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ProgressDeadlineExceeded\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")) or vector(0)",
+          "legendFormat": "Progress Deadline Exceeded",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Deployment Unavailable 15m",
+      "description": "",
+      "id": 19,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ReplicasUnavailable (15m)\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")) or vector(0)",
+          "legendFormat": "Deployment Unavailable 15m",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "StatefulSet Rollout Stuck",
+      "description": "",
+      "id": 20,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) - on (cluster, namespace, statefulset) (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"statefulset\", \"(.*)\"), \"workload_type\", \"StatefulSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")) or vector(0)",
+          "legendFormat": "StatefulSet Rollout Stuck",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "DaemonSet Rollout Stuck",
+      "description": "",
+      "id": 21,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) - on (cluster, namespace, daemonset) (max by (cluster, namespace, daemonset) (kube_daemonset_status_updated_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"daemonset\", \"(.*)\"), \"workload_type\", \"DaemonSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all pods updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")) or vector(0)",
+          "legendFormat": "DaemonSet Rollout Stuck",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Workloads With Failing Pods",
+      "description": "Workloads that own pods in CrashLoopBackOff, ImagePullBackOff, ErrImagePull or CreateContainerConfigError",
+      "id": 22,
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 37
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(count by (cluster, namespace, workload, workload_type) (count by (cluster, namespace, workload, workload_type, reason) ((kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName\", cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))) or vector(0)",
+          "legendFormat": "Workloads With Failing Pods",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "table",
+      "title": "Rollout Failures (now)",
+      "description": "Workloads currently failing a rollout check. Value = replicas behind, or number of failing containers for PodsFailing.",
+      "id": 23,
+      "gridPos": {
+        "h": 9,
+        "w": 14,
+        "x": 0,
+        "y": 41
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(max by (cluster, namespace, deployment) (kube_deployment_status_condition{condition=\"Progressing\", status=\"false\", cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}) == 1, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ProgressDeadlineExceeded\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ReplicasUnavailable (15m)\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) - on (cluster, namespace, statefulset) (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"statefulset\", \"(.*)\"), \"workload_type\", \"StatefulSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) - on (cluster, namespace, daemonset) (max by (cluster, namespace, daemonset) (kube_daemonset_status_updated_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"daemonset\", \"(.*)\"), \"workload_type\", \"DaemonSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all pods updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(label_replace(count by (cluster, namespace, workload, workload_type, reason) ((kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName\", cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))), \"check\", \"PodsFailing: $1\", \"reason\", \"(.*)\"), \"severity\", \"critical\", \"\", \"\")",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "deployment": true,
+              "statefulset": true,
+              "daemonset": true,
+              "reason": true
+            },
+            "indexByName": {
+              "severity": 0,
+              "check": 1,
+              "cluster": 2,
+              "namespace": 3,
+              "workload_type": 4,
+              "workload": 5,
+              "Value": 6
+            },
+            "renameByName": {
+              "severity": "Severity",
+              "check": "Check",
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "workload_type": "Kind",
+              "workload": "Workload",
+              "Value": "Value"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Severity",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Value"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severity"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "color": "red",
+                        "index": 0
+                      },
+                      "warning": {
+                        "color": "orange",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Rollout Issues Over Time",
+      "description": "Number of workloads failing each rollout check",
+      "id": 24,
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 14,
+        "y": 41
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\"))",
+          "legendFormat": "Deployment Rollout Stuck",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(max by (cluster, namespace, deployment) (kube_deployment_status_condition{condition=\"Progressing\", status=\"false\", cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"}) == 1, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ProgressDeadlineExceeded\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\"))",
+          "legendFormat": "Progress Deadline Exceeded",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, deployment) (kube_deployment_spec_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})) - on (cluster, namespace, deployment) (max by (cluster, namespace, deployment) (kube_deployment_status_replicas_available{cluster=~\"$cluster\", namespace=~\"$namespace\", deployment=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"deployment\", \"(.*)\"), \"workload_type\", \"Deployment\", \"\", \"\"), \"check\", \"ReplicasUnavailable (15m)\", \"\", \"\"), \"severity\", \"critical\", \"\", \"\"))",
+          "legendFormat": "Deployment Unavailable 15m",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, statefulset) (kube_statefulset_replicas{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})) - on (cluster, namespace, statefulset) (max by (cluster, namespace, statefulset) (kube_statefulset_status_replicas_updated{cluster=~\"$cluster\", namespace=~\"$namespace\", statefulset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"statefulset\", \"(.*)\"), \"workload_type\", \"StatefulSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all replicas updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\"))",
+          "legendFormat": "StatefulSet Rollout Stuck",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(label_replace(label_replace(label_replace(label_replace(min_over_time(((max by (cluster, namespace, daemonset) (kube_daemonset_status_desired_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})) - on (cluster, namespace, daemonset) (max by (cluster, namespace, daemonset) (kube_daemonset_status_updated_number_scheduled{cluster=~\"$cluster\", namespace=~\"$namespace\", daemonset=~\"$workload\"})))[15m:1m]) > 0, \"workload\", \"$1\", \"daemonset\", \"(.*)\"), \"workload_type\", \"DaemonSet\", \"\", \"\"), \"check\", \"RolloutStuck (not all pods updated for 15m)\", \"\", \"\"), \"severity\", \"warning\", \"\", \"\"))",
+          "legendFormat": "DaemonSet Rollout Stuck",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "Z",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(count by (cluster, namespace, workload, workload_type) (count by (cluster, namespace, workload, workload_type, reason) ((kube_pod_container_status_waiting_reason{reason=~\"CrashLoopBackOff|ImagePullBackOff|ErrImagePull|CreateContainerConfigError|InvalidImageName\", cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))))",
+          "legendFormat": "Workloads With Failing Pods",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Resource Usage by Workload",
+      "collapsed": false,
+      "id": 25,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 50
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "CPU by Workload (top $topn)",
+      "description": "CPU cores used by all pods of each workload",
+      "id": 26,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 51
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"}[$__rate_interval]))) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))))",
+          "legendFormat": "{{namespace}} / {{workload}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisLabel": "cores",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory by Workload (top $topn)",
+      "description": "Working-set memory of all pods of each workload",
+      "id": 27,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (container_memory_working_set_bytes{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))))",
+          "legendFormat": "{{namespace}} / {{workload}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisLabel": "",
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Workload Resource Usage (top 50 by CPU)",
+      "description": "Usage summed over each workload's pods vs their requests. Blue % = over-requested; orange/red = using more than requested.",
+      "id": 28,
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (cluster, namespace, workload, workload_type) ((count by (cluster, namespace, pod) ((max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1))) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"}[5m]))) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (kube_pod_container_resource_requests{resource=\"cpu\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) * on (cluster, namespace, pod) group_left() (max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1)) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (rate(container_cpu_usage_seconds_total{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"}[5m]))) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))) / (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (kube_pod_container_resource_requests{resource=\"cpu\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) * on (cluster, namespace, pod) group_left() (max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1)) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (container_memory_working_set_bytes{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (kube_pod_container_resource_requests{resource=\"memory\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) * on (cluster, namespace, pod) group_left() (max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1)) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "G",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "100 * (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (container_memory_working_set_bytes{container!=\"\", container!=\"POD\", cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))) / (sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (kube_pod_container_resource_requests{resource=\"memory\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) * on (cluster, namespace, pod) group_left() (max by (cluster, namespace, pod) (kube_pod_status_phase{phase=~\"Pending|Running\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1)) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\")))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "H",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "round((sum by (cluster, namespace, workload, workload_type) ((sum by (cluster, namespace, pod) (increase(kube_pod_container_status_restarts_total{cluster=~\"$cluster\", namespace=~\"$namespace\"}[$__range]))) * on (cluster, namespace, pod) group_left(workload, workload_type) (max by (cluster, namespace, pod, workload, workload_type) (label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=\"ReplicaSet\", owner_kind=~\"$workload_type\", owner_name=~\"($workload)-[^-]+\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"^(.*)-[^-]+$\"), \"workload_type\", \"Deployment\", \"\", \"\") or label_replace(label_replace(max by (cluster, namespace, pod, owner_name, owner_kind) (kube_pod_owner{owner_kind=~\"StatefulSet|DaemonSet|Job\", owner_kind=~\"$workload_type\", owner_name=~\"$workload\", cluster=~\"$cluster\", namespace=~\"$namespace\"}), \"workload\", \"$1\", \"owner_name\", \"(.*)\"), \"workload_type\", \"$1\", \"owner_kind\", \"(.*)\"))))))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "workload_type": 2,
+              "workload": 3,
+              "Value #A": 4,
+              "Value #B": 5,
+              "Value #C": 6,
+              "Value #D": 7,
+              "Value #E": 8,
+              "Value #F": 9,
+              "Value #G": 10,
+              "Value #H": 11
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "workload_type": "Kind",
+              "workload": "Workload",
+              "Value #A": "Pods",
+              "Value #B": "CPU Used",
+              "Value #C": "CPU Request",
+              "Value #D": "CPU % of Req",
+              "Value #E": "Mem Used",
+              "Value #F": "Mem Request",
+              "Value #G": "Mem % of Req",
+              "Value #H": "Restarts (range)"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "CPU Used",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 50
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pods"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU Request"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU % of Req"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mem Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mem Request"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mem % of Req"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Restarts (range)"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU % of Req"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 50
+                    },
+                    {
+                      "color": "orange",
+                      "value": 100
+                    },
+                    {
+                      "color": "red",
+                      "value": 150
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mem % of Req"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "blue",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 50
+                    },
+                    {
+                      "color": "orange",
+                      "value": 100
+                    },
+                    {
+                      "color": "red",
+                      "value": 150
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "kubernetes",
+    "aks",
+    "azure-managed-prometheus",
+    "workloads"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "regex": "",
+        "options": []
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_node_status_condition, cluster)",
+        "query": {
+          "query": "label_values(kube_node_status_condition, cluster)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "workload_type",
+        "label": "Kind",
+        "type": "custom",
+        "query": "Deployment : ReplicaSet,StatefulSet : StatefulSet,DaemonSet : DaemonSet,Job : Job",
+        "current": {
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all",
+            "selected": true
+          },
+          {
+            "text": "Deployment",
+            "value": "ReplicaSet",
+            "selected": false
+          },
+          {
+            "text": "StatefulSet",
+            "value": "StatefulSet",
+            "selected": false
+          },
+          {
+            "text": "DaemonSet",
+            "value": "DaemonSet",
+            "selected": false
+          },
+          {
+            "text": "Job",
+            "value": "Job",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "workload",
+        "label": "Workload (regex)",
+        "type": "textbox",
+        "query": ".*",
+        "current": {
+          "text": ".*",
+          "value": ".*"
+        },
+        "hide": 0,
+        "options": [
+          {
+            "text": ".*",
+            "value": ".*",
+            "selected": true
+          }
+        ],
+        "description": "Regex on the workload name, e.g. api-.* or payments|orders"
+      },
+      {
+        "name": "topn",
+        "label": "Top N",
+        "type": "custom",
+        "query": "10,20,50",
+        "current": {
+          "text": "10",
+          "value": "10"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [
+          {
+            "text": "10",
+            "value": "10",
+            "selected": true
+          },
+          {
+            "text": "20",
+            "value": "20",
+            "selected": false
+          },
+          {
+            "text": "50",
+            "value": "50",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Workloads – AKS",
+  "uid": "aks-workloads",
+  "version": 1,
+  "weekStart": ""
+}
