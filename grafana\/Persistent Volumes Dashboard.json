@@ -1,0 +1,2677 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Persistent volume capacity, utilization, top consumers, growth and failures on AKS (Azure managed Prometheus)",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "title": "Core Kubernetes – AKS",
+      "type": "link",
+      "url": "/d/aks-core-k8s",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Cluster Health – AKS",
+      "type": "link",
+      "url": "/d/aks-cluster-health",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Namespace Performance – AKS",
+      "type": "link",
+      "url": "/d/aks-namespace-perf",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Pods – AKS",
+      "type": "link",
+      "url": "/d/aks-pods",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    },
+    {
+      "title": "Workloads – AKS",
+      "type": "link",
+      "url": "/d/aks-workloads",
+      "includeVars": true,
+      "keepTime": true,
+      "icon": "dashboard"
+    }
+  ],
+  "panels": [
+    {
+      "type": "row",
+      "title": "Overview",
+      "collapsed": false,
+      "id": 1,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "PVs",
+      "description": "Persistent volumes in the selected clusters and storage classes",
+      "id": 2,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(max by (cluster, persistentvolume) (kube_persistentvolume_capacity_bytes{cluster=~\"$cluster\"}) * on (cluster, persistentvolume) group_left(storageclass) max by (cluster, persistentvolume, storageclass) (kube_persistentvolume_info{cluster=~\"$cluster\", storageclass=~\"$storageclass\"}))",
+          "legendFormat": "PVs",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PV Capacity",
+      "description": "Total provisioned capacity of those persistent volumes",
+      "id": 3,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(max by (cluster, persistentvolume) (kube_persistentvolume_capacity_bytes{cluster=~\"$cluster\"}) * on (cluster, persistentvolume) group_left(storageclass) max by (cluster, persistentvolume, storageclass) (kube_persistentvolume_info{cluster=~\"$cluster\", storageclass=~\"$storageclass\"}))",
+          "legendFormat": "PV Capacity",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PVCs",
+      "description": "Persistent volume claims in the selection",
+      "id": 4,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}))",
+          "legendFormat": "PVCs",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PVC Requested",
+      "description": "Total storage requested by those claims",
+      "id": 5,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum((((max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "PVC Requested",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Storage Used",
+      "description": "Bytes used on mounted volumes (kubelet volume stats)",
+      "id": 6,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum((((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "Storage Used",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "purple",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Volumes > 85% Full",
+      "description": "Mounted volumes above 85% used",
+      "id": 7,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(((((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))) > 85) or vector(0)",
+          "legendFormat": "Volumes > 85% Full",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Full Within 7 Days",
+      "description": "Volumes that will fill within 7 days at their growth rate over the last 6 hours",
+      "id": 8,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count(((((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_available_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_available_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))) < 7) or vector(0)",
+          "legendFormat": "Full Within 7 Days",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "stat",
+      "title": "PVC Pending / Lost",
+      "description": "Claims stuck Pending (not provisioned/bound) or Lost (PV gone)",
+      "id": 9,
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(kube_persistentvolumeclaim_status_phase{phase=~\"Pending|Lost\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) or vector(0)",
+          "legendFormat": "PVC Pending / Lost",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "noValue": "0",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "center",
+        "wideLayout": true
+      }
+    },
+    {
+      "type": "row",
+      "title": "PV Capacity",
+      "collapsed": false,
+      "id": 10,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "PV Capacity by Storage Class",
+      "description": "Provisioned PV capacity per storage class",
+      "id": 11,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (storageclass) (max by (cluster, persistentvolume) (kube_persistentvolume_capacity_bytes{cluster=~\"$cluster\"}) * on (cluster, persistentvolume) group_left(storageclass) max by (cluster, persistentvolume, storageclass) (kube_persistentvolume_info{cluster=~\"$cluster\", storageclass=~\"$storageclass\"}))",
+          "legendFormat": "{{storageclass}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 24,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Persistent Volumes",
+      "description": "Every PV with its storage class, phase, claim and capacity. PVs are cluster-scoped, so the Namespace picker does not filter this table.",
+      "id": 12,
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 8,
+        "y": 6
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, persistentvolume) (kube_persistentvolume_capacity_bytes{cluster=~\"$cluster\"}) * on (cluster, persistentvolume) group_left(storageclass) max by (cluster, persistentvolume, storageclass) (kube_persistentvolume_info{cluster=~\"$cluster\", storageclass=~\"$storageclass\"}) * on (cluster, persistentvolume) group_left(phase) max by (cluster, persistentvolume, phase) (kube_persistentvolume_status_phase{cluster=~\"$cluster\"} == 1) * on (cluster, persistentvolume) group_left(claim_namespace, claim) max by (cluster, persistentvolume, claim_namespace, claim) (label_replace(label_replace(kube_persistentvolume_claim_ref{cluster=~\"$cluster\"}, \"claim\", \"$1\", \"name\", \"(.+)\"), \"claim\", \"$1\", \"claim_name\", \"(.+)\"))) or on (cluster, persistentvolume) (max by (cluster, persistentvolume) (kube_persistentvolume_capacity_bytes{cluster=~\"$cluster\"}) * on (cluster, persistentvolume) group_left(storageclass) max by (cluster, persistentvolume, storageclass) (kube_persistentvolume_info{cluster=~\"$cluster\", storageclass=~\"$storageclass\"}) * on (cluster, persistentvolume) group_left(phase) max by (cluster, persistentvolume, phase) (kube_persistentvolume_status_phase{cluster=~\"$cluster\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "persistentvolume": 1,
+              "storageclass": 2,
+              "phase": 3,
+              "claim_namespace": 4,
+              "claim": 5,
+              "Value": 6
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "persistentvolume": "PV",
+              "storageclass": "Storage Class",
+              "phase": "Phase",
+              "claim_namespace": "Claim Namespace",
+              "claim": "Claim",
+              "Value": "Capacity"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Capacity",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bound": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "Available": {
+                        "color": "blue",
+                        "index": 1
+                      },
+                      "Released": {
+                        "color": "orange",
+                        "index": 2
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 3
+                      },
+                      "Failed": {
+                        "color": "red",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "PVC Capacity & Utilization",
+      "collapsed": false,
+      "id": 13,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "PVC Requested by Namespace",
+      "description": "Storage requested by claims, summed per namespace",
+      "id": 14,
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sort_desc(sum by (cluster, namespace) ((((max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))))",
+          "legendFormat": "{{cluster}} / {{namespace}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 24,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "PVCs",
+      "description": "Requested size, actual capacity and current usage per claim, fullest first. Used/Available are blank for claims no running pod has mounted.",
+      "id": 15,
+      "gridPos": {
+        "h": 10,
+        "w": 16,
+        "x": 8,
+        "y": 16
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_resource_requests_storage_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_available_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes_used{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) * on (cluster, namespace, persistentvolumeclaim) group_left(storageclass, phase) (max by (cluster, namespace, persistentvolumeclaim, storageclass) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"}) * on (cluster, namespace, persistentvolumeclaim) group_left(phase) max by (cluster, namespace, persistentvolumeclaim, phase) (kube_persistentvolumeclaim_status_phase{cluster=~\"$cluster\", namespace=~\"$namespace\"} == 1))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "persistentvolumeclaim": 2,
+              "storageclass": 3,
+              "phase": 4,
+              "Value #A": 5,
+              "Value #B": 6,
+              "Value #C": 7,
+              "Value #D": 8,
+              "Value #E": 9,
+              "Value #F": 10
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "persistentvolumeclaim": "PVC",
+              "storageclass": "Storage Class",
+              "phase": "Phase",
+              "Value #A": "Requested",
+              "Value #B": "Capacity",
+              "Value #C": "Used",
+              "Value #D": "Available",
+              "Value #E": "% Used",
+              "Value #F": "Inodes %"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "% Used",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Requested"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Available"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 75
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Inodes %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 75
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Bound": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "Pending": {
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "Lost": {
+                        "color": "red",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "PVC Utilization % (top $topn)",
+      "description": "Used / capacity per mounted volume",
+      "id": 16,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "min": 0,
+          "decimals": 1,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Inode Utilization % (top $topn)",
+      "description": "Inodes used / total. A volume can run out of inodes with free space left (many small files).",
+      "id": 17,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes_used{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes_used{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_inodes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "dashed"
+            }
+          },
+          "min": 0,
+          "decimals": 1,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Top Consumers",
+      "collapsed": false,
+      "id": 18,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "panels": []
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 PVCs by Used Space",
+      "description": "",
+      "id": 19,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk(10, (((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 24,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 PVCs by % Used",
+      "description": "",
+      "id": 20,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk(10, (((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 75
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 24,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Top 10 Namespaces by Used Space",
+      "description": "",
+      "id": 21,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk(10, sum by (cluster, namespace) ((((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))))",
+          "legendFormat": "{{cluster}} / {{namespace}}",
+          "range": false,
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1,
+          "min": 0,
+          "color": {
+            "mode": "continuous-BlYlRd"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 24,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Volume Growth Trend",
+      "collapsed": false,
+      "id": 22,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Used Space Over Time (top $topn)",
+      "description": "Bytes used per PVC",
+      "id": 23,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 46
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"})) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Growth Rate per Day (top $topn)",
+      "description": "Linear growth rate over the trailing 6 hours, scaled to a day. Negative = shrinking.",
+      "id": 24,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 46
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "topk($topn, (((max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}))))",
+          "legendFormat": "{{namespace}} / {{persistentvolumeclaim}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 5,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Growing Volumes – Days Until Full",
+      "description": "Volumes that grew over the last 6 hours, soonest to fill first. A projection, so bursty writes can exaggerate it.",
+      "id": 25,
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((100 * max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_capacity_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) and on (cluster, namespace, persistentvolumeclaim) (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(((max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "(((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_available_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) and on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\", storageclass=~\"$storageclass\"})) or ((max by (cluster, namespace, persistentvolumeclaim) (kubelet_volume_stats_available_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}) / (max by (cluster, namespace, persistentvolumeclaim) (deriv(kubelet_volume_stats_used_bytes{cluster=~\"$cluster\", namespace=~\"$namespace\"}[6h])) * 86400 > 0)) unless on (cluster, namespace, persistentvolumeclaim) max by (cluster, namespace, persistentvolumeclaim) (kube_persistentvolumeclaim_info{cluster=~\"$cluster\", namespace=~\"$namespace\"})))",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "persistentvolumeclaim": 2,
+              "Value #A": 3,
+              "Value #B": 4,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "persistentvolumeclaim": "PVC",
+              "Value #A": "Used",
+              "Value #B": "Capacity",
+              "Value #C": "% Used",
+              "Value #D": "Growth / Day",
+              "Value #E": "Days Until Full"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Days Until Full",
+                "desc": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 50
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Capacity"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Growth / Day"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Days Until Full"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "% Used"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 75
+                    },
+                    {
+                      "color": "red",
+                      "value": 90
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Days Until Full"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 7
+                    },
+                    {
+                      "color": "green",
+                      "value": 30
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    },
+    {
+      "type": "row",
+      "title": "Failed Pods & Volume Problems",
+      "collapsed": false,
+      "id": 26,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 64
+      },
+      "panels": []
+    },
+    {
+      "type": "timeseries",
+      "title": "Failed Pods by Namespace",
+      "description": "Pods in Failed phase over time",
+      "id": 27,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 65
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (cluster, namespace) (kube_pod_status_phase{phase=\"Failed\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) > 0",
+          "legendFormat": "{{cluster}} / {{namespace}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Pods Stuck in ContainerCreating (10m+)",
+      "description": "Usually a volume that cannot attach or mount (disk still attached to another node, zone mismatch, Azure Files auth).",
+      "id": 28,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 65
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "count by (cluster, namespace) (min_over_time(kube_pod_container_status_waiting_reason{reason=\"ContainerCreating\", cluster=~\"$cluster\", namespace=~\"$namespace\"}[10m]) == 1)",
+          "legendFormat": "{{cluster}} / {{namespace}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "PVC / PV Problems",
+      "description": "Claims Pending or Lost, and volumes Failed or Released (released = claim deleted, data kept)",
+      "id": 29,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 65
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase) (kube_persistentvolumeclaim_status_phase{phase=~\"Pending|Lost\", cluster=~\"$cluster\", namespace=~\"$namespace\"})",
+          "legendFormat": "PVC {{phase}}",
+          "range": true,
+          "instant": false
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (phase) (kube_persistentvolume_status_phase{phase=~\"Failed|Released|Pending\", cluster=~\"$cluster\"})",
+          "legendFormat": "PV {{phase}}",
+          "range": true,
+          "instant": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 15,
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          },
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PVC Pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "orange"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PVC Lost"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PV Failed"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "dark-red"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PV Released"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "PV Pending"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "light-orange"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "mean",
+            "max",
+            "lastNotNull"
+          ],
+          "sortBy": "Last *",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "type": "table",
+      "title": "Pods With PVCs Not Running",
+      "description": "Pending or Failed pods that mount a PVC, with the claim's phase. Needs kube_pod_spec_volumes_persistentvolumeclaims_info.",
+      "id": 30,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "max by (cluster, namespace, pod, persistentvolumeclaim) (kube_pod_spec_volumes_persistentvolumeclaims_info{cluster=~\"$cluster\", namespace=~\"$namespace\"}) * on (cluster, namespace, pod) group_left(phase) (max by (cluster, namespace, pod, phase) (kube_pod_status_phase{phase=~\"Pending|Failed\", cluster=~\"$cluster\", namespace=~\"$namespace\"}) == 1)",
+          "legendFormat": "",
+          "range": false,
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true
+            },
+            "indexByName": {
+              "cluster": 0,
+              "namespace": 1,
+              "pod": 2,
+              "persistentvolumeclaim": 3,
+              "phase": 4
+            },
+            "renameByName": {
+              "cluster": "Cluster",
+              "namespace": "Namespace",
+              "pod": "Pod",
+              "persistentvolumeclaim": "PVC",
+              "phase": "Pod Phase"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Pod Phase"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Pending": {
+                        "color": "orange",
+                        "index": 0
+                      },
+                      "Failed": {
+                        "color": "red",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": true,
+          "reducer": [
+            "count"
+          ],
+          "countRows": true
+        }
+      }
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": [
+    "kubernetes",
+    "aks",
+    "azure-managed-prometheus",
+    "storage"
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Prometheus",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "refresh": 1,
+        "regex": "",
+        "options": []
+      },
+      {
+        "name": "cluster",
+        "label": "Cluster",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_node_status_condition, cluster)",
+        "query": {
+          "query": "label_values(kube_node_status_condition, cluster)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "namespace",
+        "label": "Namespace",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
+        "query": {
+          "query": "label_values(kube_pod_info{cluster=~\"$cluster\"}, namespace)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "storageclass",
+        "label": "Storage Class",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "definition": "label_values(kube_persistentvolumeclaim_info{cluster=~\"$cluster\"}, storageclass)",
+        "query": {
+          "query": "label_values(kube_persistentvolumeclaim_info{cluster=~\"$cluster\"}, storageclass)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "current": {},
+        "hide": 0,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "options": []
+      },
+      {
+        "name": "topn",
+        "label": "Top N",
+        "type": "custom",
+        "query": "10,20,50",
+        "current": {
+          "text": "10",
+          "value": "10"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "options": [
+          {
+            "text": "10",
+            "value": "10",
+            "selected": true
+          },
+          {
+            "text": "20",
+            "value": "20",
+            "selected": false
+          },
+          {
+            "text": "50",
+            "value": "50",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Persistent Volumes – AKS",
+  "uid": "aks-persistent-volumes",
+  "version": 1,
+  "weekStart": ""
+}
