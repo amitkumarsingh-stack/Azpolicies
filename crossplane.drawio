@@ -1,0 +1,139 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Crossplane on AKS" id="QI9VGorN0Kt43FcxkSUG">
+    <mxGraphModel dx="1414" dy="811" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-1" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#666666;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=14;" value="&lt;b&gt;rg-aksplatform&lt;/b&gt; (Azure resource group)" vertex="1">
+          <mxGeometry height="760" width="1200" x="20" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-2" parent="1" style="rounded=1;arcSize=2;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=13;" value="" vertex="1">
+          <mxGeometry height="700" width="780" x="40" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-3" parent="1" style="rounded=1;arcSize=3;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#326CE5;strokeWidth=1.5;verticalAlign=top;align=left;spacingLeft=12;spacingTop=6;fontSize=13;" value="&lt;b&gt;aks01&lt;/b&gt; · management cluster&lt;br&gt;snet-aks01 (10.30.0.0/22)" vertex="1">
+          <mxGeometry height="630" width="400" x="60" y="230" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="&lt;b&gt;Git repository&lt;/b&gt;&lt;br&gt;Crossplane install, Providers,&lt;br&gt;ProviderConfigs, Objects, Compositions" vertex="1">
+          <mxGeometry height="70" width="300" x="100" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E1D5E7;strokeColor=#9673A6;fontSize=12;" value="&lt;b&gt;Argo CD&lt;/b&gt;&lt;br&gt;ns: argocd · syncs Git → aks01&lt;br&gt;(sync waves: Crossplane → Providers → Configs → Objects)" vertex="1">
+          <mxGeometry height="70" width="340" x="90" y="290" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=12;" value="&lt;div&gt;&lt;b&gt;Ops02&lt;/b&gt;&lt;/div&gt;&lt;b&gt;Crossplane core + RBAC manager&lt;/b&gt;&lt;br&gt;ns: crossplane-system" vertex="1">
+          <mxGeometry height="60" width="340" x="90" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#D5E8D4;strokeColor=#82B366;fontSize=11;" value="&lt;b&gt;provider-kubernetes&lt;/b&gt; (pod)&lt;br&gt;ServiceAccount: crossplane-system/provider-kubernetes&lt;br&gt;annotation: azure.workload.identity/client-id&lt;br&gt;label: azure.workload.identity/use=&quot;true&quot;&lt;br&gt;(set via DeploymentRuntimeConfig provider-kubernetes-wi)" vertex="1">
+          <mxGeometry height="100" width="340" x="90" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-9" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF2CC;strokeColor=#D6B656;fontSize=11;align=left;spacingLeft=8;" value="&lt;b&gt;ns: remote-apps&lt;/b&gt;&lt;br&gt;ProviderConfig aks02 / aks03 (identity: AzureWorkloadIdentityCredentials)&lt;br&gt;Secret aks02-wi-kubeconfig / aks03-wi-kubeconfig (no token)&lt;br&gt;Secret azure-wi-identity (clientId, tenantId, federatedTokenFile, authorityHost, serverId)&lt;br&gt;Objects → target clusters" vertex="1">
+          <mxGeometry height="120" width="340" x="90" y="630" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;fontSize=11;" value="&lt;b&gt;aks01 OIDC issuer&lt;/b&gt;&lt;br&gt;signs the ServiceAccount token&lt;br&gt;(oidc_issuer_enabled + workload_identity_enabled)" vertex="1">
+          <mxGeometry height="65" width="340" x="90" y="775" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-11" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#326CE5;strokeWidth=1.5;fontSize=12;" value="&lt;b&gt;aks02&lt;/b&gt; · target cluster&lt;br&gt;snet-aks02 (10.30.4.0/22)&lt;br&gt;private API · Entra ID + Azure RBAC" vertex="1">
+          <mxGeometry height="80" width="260" x="530" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#326CE5;strokeWidth=1.5;fontSize=12;" value="&lt;b&gt;aks03&lt;/b&gt; · target cluster&lt;br&gt;snet-aks03 (10.30.8.0/22)&lt;br&gt;private API · Entra ID + Azure RBAC" vertex="1">
+          <mxGeometry height="80" width="260" x="530" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;strokeWidth=1.5;fontSize=12;" value="&lt;b&gt;Managed identity: id-crossplane&lt;/b&gt;&lt;br&gt;user-assigned · rg-aksplatform&lt;br&gt;clientId → SA annotation + azure-wi-identity&lt;br&gt;principalId → role assignments" vertex="1">
+          <mxGeometry height="90" width="340" x="860" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=11;" value="&lt;b&gt;Federated credential: crossplane-provider-kubernetes&lt;/b&gt;&lt;br&gt;(on id-crossplane)&lt;br&gt;issuer: aks01 OIDC issuer URL&lt;br&gt;subject: system:serviceaccount:crossplane-system:provider-kubernetes&lt;br&gt;audience: api://AzureADTokenExchange" vertex="1">
+          <mxGeometry height="110" width="340" x="860" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFE6CC;strokeColor=#D79B00;fontSize=11;" value="&lt;b&gt;Azure RBAC role assignments&lt;/b&gt;&lt;br&gt;id-crossplane → Azure Kubernetes Service RBAC Cluster Admin&lt;br&gt;scope: aks02 and aks03&lt;br&gt;(production: RBAC Writer or namespace scope)" vertex="1">
+          <mxGeometry height="90" width="340" x="860" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-16" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F5F5F5;strokeColor=#999999;dashed=1;fontSize=11;" value="&lt;b&gt;Control-plane identities&lt;/b&gt; (separate, per cluster)&lt;br&gt;id-aks01 / id-aks02 / id-aks03&lt;br&gt;Network Contributor on own subnet&lt;br&gt;(used by AKS itself, not by Crossplane)" vertex="1">
+          <mxGeometry height="90" width="340" x="860" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#DAE8FC;strokeColor=#6C8EBF;strokeWidth=1.5;fontSize=12;" value="&lt;b&gt;Microsoft Entra ID&lt;/b&gt;&lt;br&gt;validates SA token against federated credential,&lt;br&gt;issues access token for AKS (serverId 6dae42f8-…3630)" vertex="1">
+          <mxGeometry height="80" width="340" x="860" y="930" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-18" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#CCCCCC;align=left;spacingLeft=8;fontSize=11;" value="&lt;b&gt;Legend&lt;/b&gt;&lt;br&gt;Purple: GitOps · Green: Crossplane · Yellow: Crossplane config&lt;br&gt;Orange: identity &amp;amp; federation · Blue: Entra / OIDC&lt;br&gt;Solid arrow: deploy / manage · Dashed arrow: authentication flow" vertex="1">
+          <mxGeometry height="80" width="420" x="40" y="930" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-19" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#9673A6;fontSize=11;" target="uhLJNclwQBNIP7wY7kxQ-6" value="pull">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-20" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#666666;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-13" value="provisions">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1020" y="100" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-21" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#9673A6;fontSize=11;" target="uhLJNclwQBNIP7wY7kxQ-7" value="apply">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-22" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#82B366;" target="uhLJNclwQBNIP7wY7kxQ-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-23" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#82B366;fontSize=11;" target="uhLJNclwQBNIP7wY7kxQ-9" value="reads">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-24" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#82B366;strokeWidth=1.5;fontSize=11;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-11" value="HTTPS 443&lt;br&gt;Entra token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="530" />
+              <mxPoint x="480" y="370" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-25" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#82B366;strokeWidth=1.5;fontSize=11;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-12" value="HTTPS 443&lt;br&gt;Entra token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="570" />
+              <mxPoint x="480" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-26" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#6C8EBF;fontSize=11;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-8" value="1. projected SA token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="75" y="807" />
+              <mxPoint x="75" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-27" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#6C8EBF;fontSize=11;exitX=1;exitY=0.85;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-17" value="2. exchange SA token">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="480" y="585" />
+              <mxPoint x="480" y="915" />
+              <mxPoint x="840" y="915" />
+              <mxPoint x="840" y="970" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-28" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#D79B00;fontSize=11;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-14" value="3. checks issuer + subject">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1225" y="970" />
+              <mxPoint x="1225" y="385" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-29" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#D79B00;" target="uhLJNclwQBNIP7wY7kxQ-13" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-30" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#D79B00;exitX=0.15;exitY=1;exitDx=0;exitDy=0;entryX=0.15;entryY=0;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-15" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="911" y="310" />
+              <mxPoint x="845" y="310" />
+              <mxPoint x="845" y="465" />
+              <mxPoint x="911" y="465" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-31" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#D79B00;fontSize=11;exitX=0;exitY=0.3;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-11" value="4. authorizes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="uhLJNclwQBNIP7wY7kxQ-32" edge="1" parent="1" source="uhLJNclwQBNIP7wY7kxQ-15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;dashed=1;strokeColor=#D79B00;exitX=0;exitY=0.7;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="uhLJNclwQBNIP7wY7kxQ-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
